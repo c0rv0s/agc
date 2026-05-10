@@ -2,11 +2,11 @@
   "meta": {
     "ticker": "AGC",
     "name": "Agent Credit Protocol",
-    "modelVersion": "launch-rewrite-1",
+    "modelVersion": "launch-1",
     "epochDurationSeconds": 3600,
     "quoteAsset": "USDC",
     "quoteUnits": "normalized-1e18",
-    "acpUnits": "1e18",
+    "agcUnits": "1e18",
     "priceUnits": "X18",
     "referenceSlippageBps": 100
   },
@@ -14,13 +14,13 @@
     "anchorPriceX18": "500000000000000000",
     "lastGrossBuyQuoteX18": "0",
     "premiumPersistenceEpochs": 0,
-    "mintedTodayAcp": "0",
+    "mintedTodayAgc": "0",
     "lastRegime": "Neutral",
     "recoveryCooldownEpochsRemaining": 0,
-    "floatSupplyAcp": "1000000000000000000000000",
+    "floatSupplyAgc": "1000000000000000000000000",
     "treasuryQuoteX18": "150000000000000000000000",
-    "treasuryAcp": "0",
-    "xacpTotalAssetsAcp": "150000000000000000000000"
+    "treasuryAgc": "0",
+    "xagcTotalAssetsAgc": "150000000000000000000000"
   },
   "anchor": {
     "anchorEmaBps": 300,
@@ -62,12 +62,12 @@
     "severeStressThresholdBps": 1000,
     "recoveryCooldownEpochs": 6
   },
-  "xacp": {
+  "xagc": {
     "rebase": false,
     "exitFeeBps": 300
   },
   "distributionBps": {
-    "xacp": 5000,
+    "xagc": 5000,
     "growthPrograms": 2000,
     "lp": 1000,
     "integrators": 500,
@@ -80,8 +80,8 @@
     "totalVolumeQuoteX18",
     "depthToTargetSlippageQuoteX18",
     "realizedVolatilityBps",
-    "xacpDepositsAcp",
-    "xacpGrossRedemptionsAcp",
+    "xagcDepositsAgc",
+    "xagcGrossRedemptionsAgc",
     "treasuryQuoteInflowX18"
   ]
 }

@@ -1,6 +1,6 @@
 # AGC Solana Credit Machine
 
-This document explains the Solana version of AGC for people evaluating how the system works and what protects it.
+Design reference for how AGC works on Solana and what protects holders, borrowers, and the balance sheet.
 
 AGC is not another generic lending market. It is credit inventory for machine economies: a Solana-native credit machine that expands circulating AGC when the balance sheet, collateral base, liquidity, and credit demand justify it, then slows or defends when those conditions weaken.
 

@@ -1,114 +1,218 @@
 {
   "scenarios": [
     {
-      "name": "healthy-growth",
-      "snapshot": {
-        "epochId": 1,
-        "productiveVolume": "500000000000",
-        "totalVolume": "1000000000000",
-        "netExitVolume": "0",
-        "shortTwapPriceX18": "1020000000000000000",
-        "productiveSettlementPriceX18": "1010000000000000000",
-        "realizedVolatilityBps": "100",
-        "productiveUsers": 500,
-        "repeatUsers": 320
-      },
-      "externalMetrics": {
-        "depthTo1Pct": "200000000000000000000000",
-        "depthTo2Pct": "400000000000000000000000",
-        "productiveGrowthBps": 5000,
-        "lpStabilityBps": "8000",
-        "idleShareBps": "1500",
-        "buybackMinAgcOut": "0"
-      }
+      "name": "persistent-bid",
+      "description": "Sustained premium, steady buy pressure, and positive xAGC deposits. Expansion should switch on after premium persistence is established.",
+      "epochs": [
+        {
+          "label": "e1",
+          "priceTwapX18": "503000000000000000",
+          "grossBuyQuoteX18": "22000000000000000000000",
+          "grossSellQuoteX18": "9000000000000000000000",
+          "totalVolumeQuoteX18": "56000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "180000000000000000000000",
+          "realizedVolatilityBps": 70,
+          "xagcDepositsAgc": "6000000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        },
+        {
+          "label": "e2",
+          "priceTwapX18": "507000000000000000",
+          "grossBuyQuoteX18": "25000000000000000000000",
+          "grossSellQuoteX18": "9500000000000000000000",
+          "totalVolumeQuoteX18": "60000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "185000000000000000000000",
+          "realizedVolatilityBps": 75,
+          "xagcDepositsAgc": "7000000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        },
+        {
+          "label": "e3",
+          "priceTwapX18": "510000000000000000",
+          "grossBuyQuoteX18": "30000000000000000000000",
+          "grossSellQuoteX18": "10000000000000000000000",
+          "totalVolumeQuoteX18": "65000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "190000000000000000000000",
+          "realizedVolatilityBps": 80,
+          "xagcDepositsAgc": "8000000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        },
+        {
+          "label": "e4",
+          "priceTwapX18": "512000000000000000",
+          "grossBuyQuoteX18": "32000000000000000000000",
+          "grossSellQuoteX18": "10500000000000000000000",
+          "totalVolumeQuoteX18": "68000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "195000000000000000000000",
+          "realizedVolatilityBps": 85,
+          "xagcDepositsAgc": "8500000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        },
+        {
+          "label": "e5",
+          "priceTwapX18": "514000000000000000",
+          "grossBuyQuoteX18": "34000000000000000000000",
+          "grossSellQuoteX18": "11000000000000000000000",
+          "totalVolumeQuoteX18": "70000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "200000000000000000000000",
+          "realizedVolatilityBps": 90,
+          "xagcDepositsAgc": "9000000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        },
+        {
+          "label": "e6",
+          "priceTwapX18": "515000000000000000",
+          "grossBuyQuoteX18": "36000000000000000000000",
+          "grossSellQuoteX18": "11500000000000000000000",
+          "totalVolumeQuoteX18": "72000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "205000000000000000000000",
+          "realizedVolatilityBps": 95,
+          "xagcDepositsAgc": "9500000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1500000000000000000000"
+        }
+      ]
     },
     {
-      "name": "thin-liquidity",
-      "snapshot": {
-        "epochId": 2,
-        "productiveVolume": "250000000000",
-        "totalVolume": "700000000000",
-        "netExitVolume": "70000000000",
-        "shortTwapPriceX18": "990000000000000000",
-        "productiveSettlementPriceX18": "995000000000000000",
-        "realizedVolatilityBps": "180",
-        "productiveUsers": 280,
-        "repeatUsers": 120
+      "name": "bank-run",
+      "description": "A confidence break with rising sell pressure, falling depth, and xAGC redemptions. Defense should engage quickly and buybacks should burn float.",
+      "initialState": {
+        "treasuryQuoteX18": "220000000000000000000000",
+        "xagcTotalAssetsAgc": "220000000000000000000000"
       },
-      "externalMetrics": {
-        "depthTo1Pct": "40000000000000000000000",
-        "depthTo2Pct": "90000000000000000000000",
-        "productiveGrowthBps": 800,
-        "lpStabilityBps": "4200",
-        "idleShareBps": "2600",
-        "buybackMinAgcOut": "25000000000000000000000"
-      }
+      "epochs": [
+        {
+          "label": "e1",
+          "priceTwapX18": "499000000000000000",
+          "grossBuyQuoteX18": "14000000000000000000000",
+          "grossSellQuoteX18": "18000000000000000000000",
+          "totalVolumeQuoteX18": "36000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "90000000000000000000000",
+          "realizedVolatilityBps": 140,
+          "xagcDepositsAgc": "1500000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        },
+        {
+          "label": "e2",
+          "priceTwapX18": "478000000000000000",
+          "grossBuyQuoteX18": "9000000000000000000000",
+          "grossSellQuoteX18": "30000000000000000000000",
+          "totalVolumeQuoteX18": "43000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "55000000000000000000000",
+          "realizedVolatilityBps": 260,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "9000000000000000000000",
+          "treasuryQuoteInflowX18": "500000000000000000000"
+        },
+        {
+          "label": "e3",
+          "priceTwapX18": "452000000000000000",
+          "grossBuyQuoteX18": "7000000000000000000000",
+          "grossSellQuoteX18": "42000000000000000000000",
+          "totalVolumeQuoteX18": "56000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "35000000000000000000000",
+          "realizedVolatilityBps": 520,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "18000000000000000000000",
+          "treasuryQuoteInflowX18": "500000000000000000000"
+        },
+        {
+          "label": "e4",
+          "priceTwapX18": "463000000000000000",
+          "grossBuyQuoteX18": "10000000000000000000000",
+          "grossSellQuoteX18": "28000000000000000000000",
+          "totalVolumeQuoteX18": "42000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "38000000000000000000000",
+          "realizedVolatilityBps": 360,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "8000000000000000000000",
+          "treasuryQuoteInflowX18": "800000000000000000000"
+        },
+        {
+          "label": "e5",
+          "priceTwapX18": "472000000000000000",
+          "grossBuyQuoteX18": "12000000000000000000000",
+          "grossSellQuoteX18": "22000000000000000000000",
+          "totalVolumeQuoteX18": "36000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "45000000000000000000000",
+          "realizedVolatilityBps": 190,
+          "xagcDepositsAgc": "1000000000000000000000",
+          "xagcGrossRedemptionsAgc": "4000000000000000000000",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        }
+      ]
     },
     {
-      "name": "exit-wave",
-      "snapshot": {
-        "epochId": 3,
-        "productiveVolume": "50000000000",
-        "totalVolume": "500000000000",
-        "netExitVolume": "400000000000",
-        "shortTwapPriceX18": "950000000000000000",
-        "productiveSettlementPriceX18": "960000000000000000",
-        "realizedVolatilityBps": "650",
-        "productiveUsers": 140,
-        "repeatUsers": 18
-      },
-      "externalMetrics": {
-        "depthTo1Pct": "25000000000000000000000",
-        "depthTo2Pct": "60000000000000000000000",
-        "productiveGrowthBps": -1800,
-        "lpStabilityBps": "2500",
-        "idleShareBps": "4200",
-        "buybackMinAgcOut": "50000000000000000000000"
-      }
-    },
-    {
-      "name": "stagnant-demand",
-      "snapshot": {
-        "epochId": 4,
-        "productiveVolume": "120000000000",
-        "totalVolume": "900000000000",
-        "netExitVolume": "50000000000",
-        "shortTwapPriceX18": "1005000000000000000",
-        "productiveSettlementPriceX18": "1002000000000000000",
-        "realizedVolatilityBps": "140",
-        "productiveUsers": 220,
-        "repeatUsers": 70
-      },
-      "externalMetrics": {
-        "depthTo1Pct": "160000000000000000000000",
-        "depthTo2Pct": "300000000000000000000000",
-        "productiveGrowthBps": -100,
-        "lpStabilityBps": "7000",
-        "idleShareBps": "2800",
-        "buybackMinAgcOut": "0"
-      }
-    },
-    {
-      "name": "wash-trade-spam",
-      "snapshot": {
-        "epochId": 5,
-        "productiveVolume": "10000000000",
-        "totalVolume": "950000000000",
-        "netExitVolume": "5000000000",
-        "shortTwapPriceX18": "1015000000000000000",
-        "productiveSettlementPriceX18": "1010000000000000000",
-        "realizedVolatilityBps": "380",
-        "productiveUsers": 40,
-        "repeatUsers": 2
-      },
-      "externalMetrics": {
-        "depthTo1Pct": "150000000000000000000000",
-        "depthTo2Pct": "260000000000000000000000",
-        "productiveGrowthBps": 50,
-        "lpStabilityBps": "7800",
-        "idleShareBps": "3300",
-        "buybackMinAgcOut": "0"
-      }
+      "name": "false-breakout",
+      "description": "Spot premium and buy bursts show up, but there is no meaningful xAGC commitment. The simulator should stay out of Expansion.",
+      "epochs": [
+        {
+          "label": "e1",
+          "priceTwapX18": "506000000000000000",
+          "grossBuyQuoteX18": "26000000000000000000000",
+          "grossSellQuoteX18": "18000000000000000000000",
+          "totalVolumeQuoteX18": "62000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "175000000000000000000000",
+          "realizedVolatilityBps": 95,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        },
+        {
+          "label": "e2",
+          "priceTwapX18": "509000000000000000",
+          "grossBuyQuoteX18": "30000000000000000000000",
+          "grossSellQuoteX18": "22000000000000000000000",
+          "totalVolumeQuoteX18": "70000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "178000000000000000000000",
+          "realizedVolatilityBps": 100,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        },
+        {
+          "label": "e3",
+          "priceTwapX18": "511000000000000000",
+          "grossBuyQuoteX18": "34000000000000000000000",
+          "grossSellQuoteX18": "25000000000000000000000",
+          "totalVolumeQuoteX18": "76000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "182000000000000000000000",
+          "realizedVolatilityBps": 110,
+          "xagcDepositsAgc": "500000000000000000000",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        },
+        {
+          "label": "e4",
+          "priceTwapX18": "508000000000000000",
+          "grossBuyQuoteX18": "26000000000000000000000",
+          "grossSellQuoteX18": "24000000000000000000000",
+          "totalVolumeQuoteX18": "69000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "180000000000000000000000",
+          "realizedVolatilityBps": 115,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        },
+        {
+          "label": "e5",
+          "priceTwapX18": "505000000000000000",
+          "grossBuyQuoteX18": "22000000000000000000000",
+          "grossSellQuoteX18": "23000000000000000000000",
+          "totalVolumeQuoteX18": "66000000000000000000000",
+          "depthToTargetSlippageQuoteX18": "176000000000000000000000",
+          "realizedVolatilityBps": 105,
+          "xagcDepositsAgc": "0",
+          "xagcGrossRedemptionsAgc": "0",
+          "treasuryQuoteInflowX18": "1000000000000000000000"
+        }
+      ]
     }
   ]
 }

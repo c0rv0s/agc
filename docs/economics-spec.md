@@ -1,10 +1,6 @@
-# AGC Rewrite Spec
+# Economics and product framing
 
-This is the clean-slate pre-launch spec.
-
-This document uses `AGC` as the canonical ticker for Agent Credit Protocol.
-
-Current repo identifiers may still say `ACP`, but treat that as legacy naming rather than the target product language.
+Economics and narrative framing for Agent Credit Protocol. On-chain authority for behavior is [`docs/solana-credit-machine.md`](./solana-credit-machine.md) and the Anchor program in `solana/programs/agc_solana/`. Repository: [`c0rv0s/agc`](https://github.com/c0rv0s/agc).
 
 ## 1. Core Framing
 
@@ -34,7 +30,7 @@ This is much closer to fractional reserve banking than to a stablecoin with full
 
 AGC is a reserve-efficient credit asset for agents: the protocol expands AGC against available liquidity and real demand, keeps the market inside a stable working range, and lets long-term holders capture the upside through `xAGC`.
 
-Updated short version:
+Roles of the core assets:
 
 - `AGC` = circulating credit
 - `xAGC` = savings / equity-like claim on growth

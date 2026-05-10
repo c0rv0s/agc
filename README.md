@@ -2,6 +2,8 @@
 
 Agent Credit Protocol is a Solana-native credit machine for autonomous markets. AGC is liquid credit inventory; xAGC owns the long-duration expansion layer.
 
+Source repository: [github.com/c0rv0s/agc](https://github.com/c0rv0s/agc).
+
 The system is built around a reserve and credit asset set:
 
 - `AGC`: liquid credit inventory agents, apps, borrowers, and users hold as working capital
@@ -12,7 +14,7 @@ The system is built around a reserve and credit asset set:
 
 The protocol does not target a hard peg. Policy keeps `AGC` inside a stable operating range, expands supply when balance-sheet conditions are strong, and defends with pauses, fees, and treasury buybacks when conditions weaken.
 
-The current Solana target is a balance-sheet credit machine rather than a swap-volume printer:
+The architecture is framed as a balance-sheet credit machine, not as a swap-volume printer:
 
 ```text
 AGC demand rises
@@ -26,11 +28,11 @@ AGC demand rises
 
 ## Current Architecture
 
-- [`/Users/nate/Desktop/agc/solana/programs/agc_solana/src/lib.rs`](/Users/nate/Desktop/agc/solana/programs/agc_solana/src/lib.rs)
+- [`solana/programs/agc_solana/src/lib.rs`](solana/programs/agc_solana/src/lib.rs)
   Anchor program for AGC mint authority, xAGC vault accounting, treasury accounts, collateral registry, credit facilities, policy settlement, buyback budgeting, and governance roles.
-- [`/Users/nate/Desktop/agc/solana/README.md`](/Users/nate/Desktop/agc/solana/README.md)
+- [`solana/README.md`](solana/README.md)
   Solana program build, account, governance, and hardening notes.
-- [`/Users/nate/Desktop/agc/web`](/Users/nate/Desktop/agc/web)
+- [`web/`](web/)
   Solana product site, AGC console, hosted docs, and AI-readable docs.
 
 ## Policy Model
@@ -65,7 +67,7 @@ There are no negative rebases in the normal path.
 
 ## Website
 
-The AGC console in [`/Users/nate/Desktop/agc/web`](/Users/nate/Desktop/agc/web) is the Solana user surface for:
+The AGC console in [`web/`](web/) is the Solana user surface for:
 
 - AGC market entry through Jupiter
 - xAGC deposits and redemptions
@@ -101,13 +103,9 @@ cargo test --manifest-path solana/programs/agc_solana/Cargo.toml --lib
 
 ## Planning Docs
 
-- Solana credit-machine design: [`/Users/nate/Desktop/agc/docs/solana-credit-machine.md`](/Users/nate/Desktop/agc/docs/solana-credit-machine.md)
-- Rewrite spec: [`/Users/nate/Desktop/agc/docs/rewrite-spec.md`](/Users/nate/Desktop/agc/docs/rewrite-spec.md)
-- Policy sheet: [`/Users/nate/Desktop/agc/docs/policy-sheet.md`](/Users/nate/Desktop/agc/docs/policy-sheet.md)
-- Launch model config: [`/Users/nate/Desktop/agc/configs/policy/acp-launch-model.json`](/Users/nate/Desktop/agc/configs/policy/acp-launch-model.json)
-- Scenario pack: [`/Users/nate/Desktop/agc/configs/policy/acp-scenarios.json`](/Users/nate/Desktop/agc/configs/policy/acp-scenarios.json)
-- Python simulator: [`/Users/nate/Desktop/agc/script/simulate_acp.py`](/Users/nate/Desktop/agc/script/simulate_acp.py)
-
-## Legacy Note
-
-The in-repo facilitator and reward-receipt path is legacy planning residue and is no longer part of the active v1 contract or web flow.
+- Solana design: [`docs/solana-credit-machine.md`](docs/solana-credit-machine.md)
+- Economics and framing: [`docs/economics-spec.md`](docs/economics-spec.md)
+- Policy sheet: [`docs/policy-sheet.md`](docs/policy-sheet.md)
+- Launch model config: [`configs/policy/launch-model.json`](configs/policy/launch-model.json)
+- Scenario pack: [`configs/policy/scenarios.json`](configs/policy/scenarios.json)
+- Epoch simulator (Python): [`script/simulate_policy.py`](script/simulate_policy.py)

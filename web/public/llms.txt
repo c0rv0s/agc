@@ -31,9 +31,9 @@ Important notes:
 
 ## Source Files
 
-- [Solana program](https://github.com/c0rv0s/ACP/tree/master/solana/programs/agc_solana/src/lib.rs): Anchor program containing the Solana policy, vault, collateral registry, and credit facility implementation.
-- [Root README](https://github.com/c0rv0s/ACP/blob/master/README.md): Repository overview.
-- [Solana README](https://github.com/c0rv0s/ACP/blob/master/solana/README.md): Solana build and account notes.
+- [Solana program](https://github.com/c0rv0s/agc/tree/master/solana/programs/agc_solana/src/lib.rs): Anchor program containing the Solana policy, vault, collateral registry, and credit facility implementation.
+- [Root README](https://github.com/c0rv0s/agc/blob/master/README.md): Repository overview.
+- [Solana README](https://github.com/c0rv0s/agc/blob/master/solana/README.md): Solana build and account notes.
 
 ## Optional
 

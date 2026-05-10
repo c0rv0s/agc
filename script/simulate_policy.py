@@ -68,23 +68,23 @@ def compute_anchor_next(anchor_price_x18: int, price_twap_x18: int, anchor_ema_b
     return clamp(ema, anchor_min, anchor_max)
 
 
-def allocate_mint(mint_budget_acp: int, distribution_bps: dict[str, int], growth_programs_enabled: bool) -> dict[str, int]:
-    xacp = mint_budget_acp * distribution_bps["xacp"] // BPS
-    growth_programs = mint_budget_acp * distribution_bps["growthPrograms"] // BPS
-    lp = mint_budget_acp * distribution_bps["lp"] // BPS
-    integrators = mint_budget_acp * distribution_bps["integrators"] // BPS
-    treasury = mint_budget_acp - xacp - growth_programs - lp - integrators
+def allocate_mint(mint_budget_agc: int, distribution_bps: dict[str, int], growth_programs_enabled: bool) -> dict[str, int]:
+    xagc_mint = mint_budget_agc * distribution_bps["xagc"] // BPS
+    growth_programs = mint_budget_agc * distribution_bps["growthPrograms"] // BPS
+    lp = mint_budget_agc * distribution_bps["lp"] // BPS
+    integrators = mint_budget_agc * distribution_bps["integrators"] // BPS
+    treasury = mint_budget_agc - xagc_mint - growth_programs - lp - integrators
 
     if not growth_programs_enabled:
         treasury += growth_programs
         growth_programs = 0
 
     return {
-        "xacpMintAcp": xacp,
-        "growthProgramsMintAcp": growth_programs,
-        "lpMintAcp": lp,
-        "integratorsMintAcp": integrators,
-        "treasuryMintAcp": treasury,
+        "xagcMintAgc": xagc_mint,
+        "growthProgramsMintAgc": growth_programs,
+        "lpMintAgc": lp,
+        "integratorsMintAgc": integrators,
+        "treasuryMintAgc": treasury,
     }
 
 
@@ -102,7 +102,7 @@ def simulate_epoch(
 ) -> dict[str, Any]:
     expansion = model["expansion"]
     defense = model["defense"]
-    xacp = model["xacp"]
+    xagc_cfg = model["xagc"]
     anchor_params = model["anchor"]
     bands = model["bandsBps"]
     reserve_coverage = model["reserveCoverageBps"]
@@ -114,30 +114,30 @@ def simulate_epoch(
     total_volume_quote_x18 = epoch["totalVolumeQuoteX18"]
     depth_to_target_slippage_quote_x18 = epoch["depthToTargetSlippageQuoteX18"]
     realized_volatility_bps = epoch["realizedVolatilityBps"]
-    xacp_deposits_acp = epoch.get("xacpDepositsAcp", 0)
-    xacp_gross_redemptions_acp = epoch.get("xacpGrossRedemptionsAcp", 0)
+    xagc_deposits_agc = epoch.get("xagcDepositsAgc", 0)
+    xagc_gross_redemptions_agc = epoch.get("xagcGrossRedemptionsAgc", 0)
     treasury_quote_inflow_x18 = epoch.get("treasuryQuoteInflowX18", 0)
 
     anchor_price_x18 = state["anchorPriceX18"]
-    float_supply_acp = state["floatSupplyAcp"]
+    float_supply_agc = state["floatSupplyAgc"]
     treasury_quote_x18 = state["treasuryQuoteX18"]
-    treasury_acp = state["treasuryAcp"]
-    xacp_total_assets_acp = state["xacpTotalAssetsAcp"]
+    treasury_agc = state["treasuryAgc"]
+    xagc_total_assets_agc = state["xagcTotalAssetsAgc"]
 
-    xacp_exit_fee_acp = xacp_gross_redemptions_acp * xacp["exitFeeBps"] // BPS
-    xacp_net_redemption_acp = xacp_gross_redemptions_acp - xacp_exit_fee_acp
-    xacp_net_deposits_acp = xacp_deposits_acp - xacp_gross_redemptions_acp
+    xagc_exit_fee_agc = xagc_gross_redemptions_agc * xagc_cfg["exitFeeBps"] // BPS
+    xagc_net_redemption_agc = xagc_gross_redemptions_agc - xagc_exit_fee_agc
+    xagc_net_deposits_agc = xagc_deposits_agc - xagc_gross_redemptions_agc
 
-    if xacp_gross_redemptions_acp > xacp_total_assets_acp + xacp_deposits_acp:
+    if xagc_gross_redemptions_agc > xagc_total_assets_agc + xagc_deposits_agc:
         raise ValueError(
-            f"gross xACP redemptions exceed vault assets in epoch '{epoch.get('label', 'unknown')}'"
+            f"gross xAGC redemptions exceed vault assets in epoch '{epoch.get('label', 'unknown')}'"
         )
-    if xacp_deposits_acp > float_supply_acp:
+    if xagc_deposits_agc > float_supply_agc:
         raise ValueError(
-            f"xACP deposits exceed float supply in epoch '{epoch.get('label', 'unknown')}'"
+            f"xAGC deposits exceed float supply in epoch '{epoch.get('label', 'unknown')}'"
         )
 
-    credit_outstanding_quote_x18 = float_supply_acp * anchor_price_x18 // WAD
+    credit_outstanding_quote_x18 = float_supply_agc * anchor_price_x18 // WAD
     gross_buy_floor_bps = safe_div(gross_buy_quote_x18 * BPS, credit_outstanding_quote_x18)
     net_buy_quote_x18 = max(gross_buy_quote_x18 - gross_sell_quote_x18, 0)
     net_buy_pressure_bps = safe_div(net_buy_quote_x18 * BPS, credit_outstanding_quote_x18)
@@ -151,8 +151,8 @@ def simulate_epoch(
     reserve_coverage_bps = safe_div(
         depth_to_target_slippage_quote_x18 * BPS, credit_outstanding_quote_x18
     )
-    locked_share_bps = safe_div(xacp_total_assets_acp * BPS, float_supply_acp)
-    lock_flow_bps = safe_div(max(xacp_net_deposits_acp, 0) * BPS, float_supply_acp)
+    locked_share_bps = safe_div(xagc_total_assets_agc * BPS, float_supply_agc)
+    lock_flow_bps = safe_div(max(xagc_net_deposits_agc, 0) * BPS, float_supply_agc)
     premium_bps = 0
     if price_twap_x18 > anchor_price_x18 and anchor_price_x18 > 0:
         premium_bps = (price_twap_x18 - anchor_price_x18) * BPS // anchor_price_x18
@@ -209,14 +209,14 @@ def simulate_epoch(
 
     demand_score_bps = 0
     health_score_bps = 0
-    mint_budget_acp = 0
+    mint_budget_agc = 0
     mint_rate_bps = 0
     mint_allocations = {
-        "xacpMintAcp": 0,
-        "growthProgramsMintAcp": 0,
-        "lpMintAcp": 0,
-        "integratorsMintAcp": 0,
-        "treasuryMintAcp": 0,
+        "xagcMintAgc": 0,
+        "growthProgramsMintAgc": 0,
+        "lpMintAgc": 0,
+        "integratorsMintAgc": 0,
+        "treasuryMintAgc": 0,
     }
 
     if regime == "Expansion":
@@ -284,16 +284,16 @@ def simulate_epoch(
             expansion["expansionKappaBps"] * demand_score_bps // BPS * health_score_bps // BPS
         )
         mint_rate_bps = min(raw_mint_rate_bps, expansion["maxMintPerEpochBps"])
-        remaining_daily_mint_acp = max(
-            float_supply_acp * expansion["maxMintPerDayBps"] // BPS - state["mintedTodayAcp"],
+        remaining_daily_mint_agc = max(
+            float_supply_agc * expansion["maxMintPerDayBps"] // BPS - state["mintedTodayAgc"],
             0,
         )
-        mint_budget_acp = min(
-            float_supply_acp * mint_rate_bps // BPS,
-            remaining_daily_mint_acp,
+        mint_budget_agc = min(
+            float_supply_agc * mint_rate_bps // BPS,
+            remaining_daily_mint_agc,
         )
         mint_allocations = allocate_mint(
-            mint_budget_acp, distribution_bps, growth_programs_enabled
+            mint_budget_agc, distribution_bps, growth_programs_enabled
         )
 
     price_stress_bps = 0
@@ -307,7 +307,7 @@ def simulate_epoch(
         stress_score_bps = max(stress_score_bps, defense["severeStressThresholdBps"])
 
     buyback_budget_quote_x18 = 0
-    buyback_burn_acp = 0
+    buyback_burn_agc = 0
     if regime == "Defense":
         buyback_cap_bps = (
             defense["severeDefenseSpendBps"]
@@ -320,31 +320,31 @@ def simulate_epoch(
         )
         buyback_budget_quote_x18 = treasury_quote_x18 * buyback_spend_rate_bps // BPS
         if price_twap_x18 > 0:
-            buyback_burn_acp = buyback_budget_quote_x18 * WAD // price_twap_x18
+            buyback_burn_agc = buyback_budget_quote_x18 * WAD // price_twap_x18
 
     treasury_quote_next_x18 = treasury_quote_x18 + treasury_quote_inflow_x18 - buyback_budget_quote_x18
-    treasury_acp_next = (
-        treasury_acp
-        + mint_allocations["treasuryMintAcp"]
-        + xacp_exit_fee_acp
+    treasury_agc_next = (
+        treasury_agc
+        + mint_allocations["treasuryMintAgc"]
+        + xagc_exit_fee_agc
     )
-    xacp_total_assets_next_acp = (
-        xacp_total_assets_acp
-        + xacp_deposits_acp
-        - xacp_gross_redemptions_acp
-        + mint_allocations["xacpMintAcp"]
+    xagc_total_assets_next_agc = (
+        xagc_total_assets_agc
+        + xagc_deposits_agc
+        - xagc_gross_redemptions_agc
+        + mint_allocations["xagcMintAgc"]
     )
-    float_supply_next_acp = (
-        float_supply_acp
-        - xacp_deposits_acp
-        + xacp_net_redemption_acp
-        + mint_allocations["growthProgramsMintAcp"]
-        + mint_allocations["lpMintAcp"]
-        + mint_allocations["integratorsMintAcp"]
-        - buyback_burn_acp
+    float_supply_next_agc = (
+        float_supply_agc
+        - xagc_deposits_agc
+        + xagc_net_redemption_agc
+        + mint_allocations["growthProgramsMintAgc"]
+        + mint_allocations["lpMintAgc"]
+        + mint_allocations["integratorsMintAgc"]
+        - buyback_burn_agc
     )
 
-    if treasury_quote_next_x18 < 0 or xacp_total_assets_next_acp < 0 or float_supply_next_acp < 0:
+    if treasury_quote_next_x18 < 0 or xagc_total_assets_next_agc < 0 or float_supply_next_agc < 0:
         raise ValueError(f"epoch '{epoch.get('label', 'unknown')}' produced negative state")
 
     if regime == "Defense":
@@ -359,13 +359,13 @@ def simulate_epoch(
         "anchorPriceX18": anchor_next_x18,
         "premiumPersistenceEpochs": premium_persistence_epochs,
         "lastGrossBuyQuoteX18": gross_buy_quote_x18,
-        "mintedTodayAcp": state["mintedTodayAcp"] + mint_budget_acp,
+        "mintedTodayAgc": state["mintedTodayAgc"] + mint_budget_agc,
         "lastRegime": regime,
         "recoveryCooldownEpochsRemaining": recovery_cooldown_next,
-        "floatSupplyAcp": float_supply_next_acp,
+        "floatSupplyAgc": float_supply_next_agc,
         "treasuryQuoteX18": treasury_quote_next_x18,
-        "treasuryAcp": treasury_acp_next,
-        "xacpTotalAssetsAcp": xacp_total_assets_next_acp,
+        "treasuryAgc": treasury_agc_next,
+        "xagcTotalAssetsAgc": xagc_total_assets_next_agc,
     }
 
     return {
@@ -389,31 +389,31 @@ def simulate_epoch(
         "demandScoreBps": demand_score_bps,
         "healthScoreBps": health_score_bps,
         "mintRateBps": mint_rate_bps,
-        "mintBudgetAcp": mint_budget_acp,
+        "mintBudgetAgc": mint_budget_agc,
         "buybackBudgetQuoteX18": buyback_budget_quote_x18,
-        "buybackBurnAcp": buyback_burn_acp,
+        "buybackBurnAgc": buyback_burn_agc,
         "stressScoreBps": stress_score_bps,
         "grossBuyQuoteX18": gross_buy_quote_x18,
         "grossSellQuoteX18": gross_sell_quote_x18,
         "totalVolumeQuoteX18": total_volume_quote_x18,
         "depthToTargetSlippageQuoteX18": depth_to_target_slippage_quote_x18,
         "realizedVolatilityBps": realized_volatility_bps,
-        "xacpDepositsAcp": xacp_deposits_acp,
-        "xacpGrossRedemptionsAcp": xacp_gross_redemptions_acp,
-        "xacpExitFeeAcp": xacp_exit_fee_acp,
+        "xagcDepositsAgc": xagc_deposits_agc,
+        "xagcGrossRedemptionsAgc": xagc_gross_redemptions_agc,
+        "xagcExitFeeAgc": xagc_exit_fee_agc,
         "treasuryQuoteInflowX18": treasury_quote_inflow_x18,
         "mintAllocations": mint_allocations,
         "stateBefore": {
-            "floatSupplyAcp": float_supply_acp,
+            "floatSupplyAgc": float_supply_agc,
             "treasuryQuoteX18": treasury_quote_x18,
-            "treasuryAcp": treasury_acp,
-            "xacpTotalAssetsAcp": xacp_total_assets_acp,
+            "treasuryAgc": treasury_agc,
+            "xagcTotalAssetsAgc": xagc_total_assets_agc,
         },
         "stateAfter": {
-            "floatSupplyAcp": float_supply_next_acp,
+            "floatSupplyAgc": float_supply_next_agc,
             "treasuryQuoteX18": treasury_quote_next_x18,
-            "treasuryAcp": treasury_acp_next,
-            "xacpTotalAssetsAcp": xacp_total_assets_next_acp,
+            "treasuryAgc": treasury_agc_next,
+            "xagcTotalAssetsAgc": xagc_total_assets_next_agc,
         },
         "nextState": next_state,
     }
@@ -427,7 +427,7 @@ def simulate_scenario(model: dict[str, Any], scenario: dict[str, Any]) -> dict[s
 
     for index, epoch in enumerate(scenario["epochs"]):
         if index > 0 and index % epochs_per_day == 0:
-            state["mintedTodayAcp"] = 0
+            state["mintedTodayAgc"] = 0
         result = simulate_epoch(model, state, epoch, growth_programs_enabled)
         results.append(result)
         state = result["nextState"]
@@ -446,7 +446,7 @@ def render_text_report(simulation: dict[str, Any]) -> str:
     if simulation.get("description"):
         lines.append(simulation["description"])
     header = (
-        "epoch  regime     price   anchor  prem   cov    buys     sells    lock    mint     burn     xacp     t_quote  eff"
+        "epoch  regime     price   anchor  prem   cov    buys     sells    lock    mint     burn     xagc     t_quote  eff"
     )
     lines.append(header)
     lines.append("-" * len(header))
@@ -464,9 +464,9 @@ def render_text_report(simulation: dict[str, Any]) -> str:
             f"{format_wad(epoch['grossBuyQuoteX18']):>8} "
             f"{format_wad(epoch['grossSellQuoteX18']):>8} "
             f"{pct_from_bps(epoch['lockFlowBps']):>7} "
-            f"{format_wad(epoch['mintBudgetAcp']):>8} "
-            f"{format_wad(epoch['buybackBurnAcp']):>8} "
-            f"{format_wad(epoch['stateAfter']['xacpTotalAssetsAcp']):>8} "
+            f"{format_wad(epoch['mintBudgetAgc']):>8} "
+            f"{format_wad(epoch['buybackBurnAgc']):>8} "
+            f"{format_wad(epoch['stateAfter']['xagcTotalAssetsAgc']):>8} "
             f"{format_wad(epoch['stateAfter']['treasuryQuoteX18']):>8} "
             f"{format_ratio_x(credit_outstanding, depth):>5}"
         )
@@ -476,28 +476,28 @@ def render_text_report(simulation: dict[str, Any]) -> str:
     lines.append(
         "final: "
         f"anchor={format_price(final_state['anchorPriceX18'])} "
-        f"float={format_wad(final_state['floatSupplyAcp'])} "
-        f"xacp_assets={format_wad(final_state['xacpTotalAssetsAcp'])} "
+        f"float={format_wad(final_state['floatSupplyAgc'])} "
+        f"xagc_assets={format_wad(final_state['xagcTotalAssetsAgc'])} "
         f"treasury_quote={format_wad(final_state['treasuryQuoteX18'])} "
-        f"treasury_acp={format_wad(final_state['treasuryAcp'])}"
+        f"treasury_agc={format_wad(final_state['treasuryAgc'])}"
     )
     return "\n".join(lines)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simulate ACP policy scenarios.")
+    parser = argparse.ArgumentParser(description="Simulate AGC policy scenarios from JSON models.")
     root = Path(__file__).resolve().parent.parent
     parser.add_argument(
         "--model",
         type=Path,
-        default=root / "configs" / "policy" / "acp-launch-model.json",
-        help="Path to the ACP launch model JSON.",
+        default=root / "configs" / "policy" / "launch-model.json",
+        help="Path to the launch policy model JSON.",
     )
     parser.add_argument(
         "--scenarios",
         type=Path,
-        default=root / "configs" / "policy" / "acp-scenarios.json",
-        help="Path to the ACP scenario JSON.",
+        default=root / "configs" / "policy" / "scenarios.json",
+        help="Path to the scenarios JSON.",
     )
     parser.add_argument(
         "--scenario",

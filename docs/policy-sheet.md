@@ -6,8 +6,8 @@ Use it as the source of truth for simulation and later implementation.
 
 Companion files:
 
-- framing and product language: [`/Users/nate/Desktop/agc/docs/rewrite-spec.md`](/Users/nate/Desktop/agc/docs/rewrite-spec.md)
-- simulator parameter model: [`/Users/nate/Desktop/agc/configs/policy/acp-launch-model.json`](/Users/nate/Desktop/agc/configs/policy/acp-launch-model.json)
+- framing and product language: [`economics-spec.md`](economics-spec.md)
+- simulator parameter model: [`../configs/policy/launch-model.json`](../configs/policy/launch-model.json)
 
 ## 1. Units
 
@@ -27,13 +27,13 @@ Carry these between epochs:
 - `anchorPriceX18`
 - `premiumPersistenceEpochs`
 - `lastGrossBuyQuoteX18`
-- `mintedTodayAcp`
+- `mintedTodayAgc`
 - `lastRegime`
 - `recoveryCooldownEpochsRemaining`
-- `floatSupplyAcp`
+- `floatSupplyAgc`
 - `treasuryQuoteX18`
-- `treasuryAcp`
-- `xagcTotalAssetsAcp`
+- `treasuryAgc`
+- `xagcTotalAssetsAgc`
 
 ## 3. Epoch Inputs
 
@@ -51,8 +51,8 @@ Per epoch the simulator needs:
 - `oracleConfidenceBps`
 - `staleOracleCount`
 - `realizedVolatilityBps`
-- `xagcDepositsAcp`
-- `xagcGrossRedemptionsAcp`
+- `xagcDepositsAgc`
+- `xagcGrossRedemptionsAgc`
 - `treasuryQuoteInflowX18`
 
 ## 4. Derived Metrics
@@ -60,7 +60,7 @@ Per epoch the simulator needs:
 Definitions:
 
 - `BPS = 10_000`
-- `creditOutstandingQuoteX18 = floatSupplyAcp * anchorPriceX18 / 1e18`
+- `creditOutstandingQuoteX18 = floatSupplyAgc * anchorPriceX18 / 1e18`
 - `grossBuyFloorBps = grossBuyQuoteX18 * BPS / creditOutstandingQuoteX18`
 - `netBuyQuoteX18 = max(grossBuyQuoteX18 - grossSellQuoteX18, 0)`
 - `netBuyPressureBps = netBuyQuoteX18 * BPS / creditOutstandingQuoteX18`
@@ -69,11 +69,11 @@ Definitions:
 - `reserveCoverageBps = creditOutstandingQuoteX18 == 0 ? 0 : riskWeightedReserveQuoteX18 * BPS / creditOutstandingQuoteX18`
 - `stableCashCoverageBps = creditOutstandingQuoteX18 == 0 ? 0 : stableCashReserveQuoteX18 * BPS / creditOutstandingQuoteX18`
 - `liquidityDepthCoverageBps = creditOutstandingQuoteX18 == 0 ? 0 : liquidityDepthQuoteX18 * BPS / creditOutstandingQuoteX18`
-- `lockedShareBps = floatSupplyAcp == 0 ? 0 : xagcTotalAssetsAcp * BPS / floatSupplyAcp`
-- `xagcExitFeeAcp = xagcGrossRedemptionsAcp * xagcExitFeeBps / BPS`
-- `xagcNetRedemptionAcp = xagcGrossRedemptionsAcp - xagcExitFeeAcp`
-- `xagcNetDepositsAcp = xagcDepositsAcp - xagcGrossRedemptionsAcp`
-- `lockFlowBps = floatSupplyAcp == 0 ? 0 : max(xagcNetDepositsAcp, 0) * BPS / floatSupplyAcp`
+- `lockedShareBps = floatSupplyAgc == 0 ? 0 : xagcTotalAssetsAgc * BPS / floatSupplyAgc`
+- `xagcExitFeeAgc = xagcGrossRedemptionsAgc * xagcExitFeeBps / BPS`
+- `xagcNetRedemptionAgc = xagcGrossRedemptionsAgc - xagcExitFeeAgc`
+- `xagcNetDepositsAgc = xagcDepositsAgc - xagcGrossRedemptionsAgc`
+- `lockFlowBps = floatSupplyAgc == 0 ? 0 : max(xagcNetDepositsAgc, 0) * BPS / floatSupplyAgc`
 - `premiumBps = priceTwapX18 > anchorPriceX18 ? (priceTwapX18 - anchorPriceX18) * BPS / anchorPriceX18 : 0`
 
 ## 5. Anchor
@@ -201,8 +201,8 @@ Raw mint rate:
 Final mint rate:
 
 - `mintRateBps = min(rawMintRateBps, maxMintPerEpochBps)`
-- `remainingDailyMintAcp = max(floatSupplyAcp * maxMintPerDayBps / BPS - mintedTodayAcp, 0)`
-- `mintBudgetAcp = min(floatSupplyAcp * mintRateBps / BPS, remainingDailyMintAcp)`
+- `remainingDailyMintAgc = max(floatSupplyAgc * maxMintPerDayBps / BPS - mintedTodayAgc, 0)`
+- `mintBudgetAgc = min(floatSupplyAgc * mintRateBps / BPS, remainingDailyMintAgc)`
 
 Mint budget is zero unless regime is `Expansion`.
 
@@ -229,7 +229,7 @@ Rules:
 - `xAGC` share is minted directly into the `xAGC` vault
 - `treasury` share is minted to treasury inventory
 - if growth programs are disabled, their budget rolls to treasury
-- `growthPrograms`, `lp`, and `integrators` are assumed liquid and increase `floatSupplyAcp`
+- `growthPrograms`, `lp`, and `integrators` are assumed liquid and increase `floatSupplyAgc`
 
 ## 11. Defense Score
 
@@ -255,7 +255,7 @@ Definitions:
 - `buybackCapBps = stressScoreBps >= severeStressThresholdBps ? severeDefenseSpendBps : mildDefenseSpendBps`
 - `buybackSpendRateBps = min(buybackKappaBps * stressScoreBps / BPS, buybackCapBps)`
 - `buybackBudgetQuoteX18 = treasuryQuoteX18 * buybackSpendRateBps / BPS`
-- `buybackBurnAcp = priceTwapX18 == 0 ? 0 : buybackBudgetQuoteX18 * 1e18 / priceTwapX18`
+- `buybackBurnAgc = priceTwapX18 == 0 ? 0 : buybackBudgetQuoteX18 * 1e18 / priceTwapX18`
 
 Buyback budget is zero unless regime is `Defense`.
 
@@ -267,16 +267,16 @@ Definitions:
 
 On redemption:
 
-- `grossRedeemAcp = shares * vaultAssets / totalShares`
-- `feeAcp = grossRedeemAcp * xagcExitFeeBps / BPS`
-- `netRedeemAcp = grossRedeemAcp - feeAcp`
+- `grossRedeemAgc = shares * vaultAssets / totalShares`
+- `feeAgc = grossRedeemAgc * xagcExitFeeBps / BPS`
+- `netRedeemAgc = grossRedeemAgc - feeAgc`
 
 Rules:
 
-- `feeAcp` goes to treasury
+- `feeAgc` goes to treasury
 - treasury does not aggressively sell fee AGC during stress
 
-For simulation, it is acceptable to input `xagcGrossRedemptionsAcp` directly instead of share counts.
+For simulation, it is acceptable to input `xagcGrossRedemptionsAgc` directly instead of share counts.
 
 ## 14. State Transitions
 
@@ -285,11 +285,11 @@ At the end of each epoch:
 - `anchorPriceX18 = anchorNextX18`
 - `lastGrossBuyQuoteX18 = grossBuyQuoteX18`
 - `treasuryQuoteX18 = treasuryQuoteX18 + treasuryQuoteInflowX18 - buybackBudgetQuoteX18`
-- `treasuryAcp = treasuryAcp + treasuryMintAcp + xagcExitFeeAcp`
-- `xagcTotalAssetsAcp = xagcTotalAssetsAcp + xagcDepositsAcp - xagcGrossRedemptionsAcp + xagcMintAcp`
-- `floatSupplyAcp = floatSupplyAcp - xagcDepositsAcp + xagcNetRedemptionAcp + growthProgramsMintAcp + lpMintAcp + integratorsMintAcp - buybackBurnAcp`
+- `treasuryAgc = treasuryAgc + treasuryMintAgc + xagcExitFeeAgc`
+- `xagcTotalAssetsAgc = xagcTotalAssetsAgc + xagcDepositsAgc - xagcGrossRedemptionsAgc + xagcMintAgc`
+- `floatSupplyAgc = floatSupplyAgc - xagcDepositsAgc + xagcNetRedemptionAgc + growthProgramsMintAgc + lpMintAgc + integratorsMintAgc - buybackBurnAgc`
 
-Treasury AGC inventory does not count toward `floatSupplyAcp` until it is distributed or sold back into circulation.
+Treasury AGC inventory does not count toward `floatSupplyAgc` until it is distributed or sold back into circulation.
 
 ## 15. Recommended Launch Values
 

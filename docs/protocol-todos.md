@@ -1,6 +1,6 @@
 # AGC Protocol TODOs
 
-This file tracks the remaining work to move the Solana protocol from current implementation to production launch.
+Remaining work checklist toward production launch of the Solana program and web surface.
 
 ## Solana Program
 

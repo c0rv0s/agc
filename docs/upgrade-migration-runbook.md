@@ -22,7 +22,7 @@ Governance setup is finalized during deployment prep. Until then, local and devn
 
 Account migrations use explicit versioning. New account fields are added with reserved space where possible. If an account cannot be safely extended, the program adds a new account version and a migration instruction that copies state under admin or risk authority.
 
-Migration instructions are single-purpose. They validate the old account, initialize the new account, copy only intended fields, and emit an event that external indexers can verify.
+Migration instructions are single-purpose. They validate the account being migrated, initialize the migrated layout, copy only intended fields, and emit an event that external indexers can verify.
 
 ## Upgrade Execution
 
@@ -39,7 +39,7 @@ Solana upgrades cannot be reversed by wishful thinking; rollback is another upgr
 
 - Pause risky surfaces first.
 - Stop keepers from executing expansion or buyback campaigns if needed.
-- Prepare a rollback binary from the previous audited commit.
+- Prepare a rollback binary from the last audited release (tag or commit).
 - Upgrade back through the multisig.
 - Re-run smoke tests and publish the incident note.
 
