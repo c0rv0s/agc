@@ -7,7 +7,6 @@
 		"test:solana": "cd solana && anchor test --skip-build --provider.cluster localnet --validator legacy",
 		"build:web": "vite build --config web/vite.config.ts",
 		"dev:web": "vite --config web/vite.config.ts",
-		"simulate:policy": "node script/simulatePolicy.mjs",
 		"simulate:epochs": "python3 script/simulate_policy.py"
 	},
 	"dependencies": {

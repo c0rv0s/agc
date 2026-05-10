@@ -293,24 +293,26 @@ Treasury AGC inventory does not count toward `floatSupplyAgc` until it is distri
 
 ## 15. Recommended Launch Values
 
+These are the conservative launch baseline. The collateral-side counterparts (reserve weight, collateral factor, liquidation threshold, concentration cap, oracle staleness) live in [`risk-parameter-presets.md`](risk-parameter-presets.md).
+
 - `initialAnchorPriceX18 = 0.50e18`
 - `normalBandBps = 300`
 - `stressedBandBps = 700`
-- `anchorEmaBps = 300`
-- `maxAnchorCrawlBps = 10`
+- `anchorEmaBps = 500`
+- `maxAnchorCrawlBps = 100`
 - `minPremiumBps = 100`
-- `premiumPersistenceRequired = 3`
-- `minGrossBuyFloorBps = 100`
+- `premiumPersistenceRequired = 2`
+- `minGrossBuyFloorBps = 50`
 - `targetGrossBuyBps = 500`
-- `targetNetBuyBps = 100`
+- `targetNetBuyBps = 250`
 - `targetLockFlowBps = 100`
-- `targetBuyGrowthBps = 200`
+- `targetBuyGrowthBps = 500`
 - `minLockedShareBps = 1000`
-- `targetLockedShareBps = 2500`
-- `expansionReserveCoverageBps = 2000`
-- `targetReserveCoverageBps = 3000`
-- `neutralReserveCoverageBps = 1200`
-- `defenseReserveCoverageBps = 1200`
+- `targetLockedShareBps = 3000`
+- `expansionReserveCoverageBps = 3000`
+- `targetReserveCoverageBps = 8000`
+- `neutralReserveCoverageBps = 2000`
+- `defenseReserveCoverageBps = 1500`
 - `hardDefenseReserveCoverageBps = 800`
 - `minStableCashCoverageBps = 1200`
 - `targetStableCashCoverageBps = 2500`
@@ -320,16 +322,16 @@ Treasury AGC inventory does not count toward `floatSupplyAgc` until it is distri
 - `maxReserveConcentrationBps = 6000`
 - `maxOracleConfidenceBps = 150`
 - `maxStaleOracleCount = 0`
-- `maxExpansionVolatilityBps = 150`
-- `defenseVolatilityBps = 400`
-- `maxExpansionExitPressureBps = 1800`
-- `defenseExitPressureBps = 3500`
-- `expansionKappaBps = 150`
+- `maxExpansionVolatilityBps = 300`
+- `defenseVolatilityBps = 1000`
+- `maxExpansionExitPressureBps = 3000`
+- `defenseExitPressureBps = 7000`
+- `expansionKappaBps = 1000`
 - `maxMintPerEpochBps = 100`
-- `maxMintPerDayBps = 500`
-- `buybackKappaBps = 2500`
-- `mildDefenseSpendBps = 200`
-- `severeDefenseSpendBps = 1000`
+- `maxMintPerDayBps = 250`
+- `buybackKappaBps = 5000`
+- `mildDefenseSpendBps = 500`
+- `severeDefenseSpendBps = 1500`
 - `severeStressThresholdBps = 1000`
-- `recoveryCooldownEpochs = 6`
-- `xagcExitFeeBps = 300`
+- `recoveryCooldownEpochs = 2`
+- `xagcExitFeeBps = 100`

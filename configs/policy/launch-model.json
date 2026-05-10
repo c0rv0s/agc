@@ -2,7 +2,7 @@
   "meta": {
     "ticker": "AGC",
     "name": "Agent Credit Protocol",
-    "modelVersion": "launch-1",
+    "modelVersion": "launch-2",
     "epochDurationSeconds": 3600,
     "quoteAsset": "USDC",
     "quoteUnits": "normalized-1e18",
@@ -23,55 +23,71 @@
     "xagcTotalAssetsAgc": "150000000000000000000000"
   },
   "anchor": {
-    "anchorEmaBps": 300,
-    "maxAnchorCrawlBps": 10
+    "anchorEmaBps": 500,
+    "maxAnchorCrawlBps": 100
   },
   "bandsBps": {
     "normal": 300,
     "stressed": 700
   },
   "reserveCoverageBps": {
-    "target": 3000,
-    "expansionMin": 2000,
-    "neutralLower": 1200,
-    "defense": 1200,
+    "target": 8000,
+    "expansionMin": 3000,
+    "neutralLower": 2000,
+    "defense": 1500,
     "hardDefense": 800
+  },
+  "stableCashCoverageBps": {
+    "target": 2500,
+    "expansionMin": 1200,
+    "defense": 800
+  },
+  "liquidityDepthCoverageBps": {
+    "target": 5000,
+    "expansionMin": 2000
+  },
+  "concentrationBps": {
+    "max": 6000
+  },
+  "oracle": {
+    "maxConfidenceBps": 150,
+    "maxStaleCount": 0
   },
   "expansion": {
     "minPremiumBps": 100,
-    "premiumPersistenceRequired": 3,
-    "minGrossBuyFloorBps": 100,
+    "premiumPersistenceRequired": 2,
+    "minGrossBuyFloorBps": 50,
     "minLockedShareBps": 1000,
     "targetGrossBuyBps": 500,
-    "targetNetBuyBps": 100,
+    "targetNetBuyBps": 250,
     "targetLockFlowBps": 100,
-    "targetBuyGrowthBps": 200,
-    "targetLockedShareBps": 2500,
-    "maxVolatilityBps": 150,
-    "maxExitPressureBps": 1800,
-    "expansionKappaBps": 150,
+    "targetBuyGrowthBps": 500,
+    "targetLockedShareBps": 3000,
+    "maxVolatilityBps": 300,
+    "maxExitPressureBps": 3000,
+    "expansionKappaBps": 1000,
     "maxMintPerEpochBps": 100,
-    "maxMintPerDayBps": 500
+    "maxMintPerDayBps": 250
   },
   "defense": {
-    "defenseVolatilityBps": 400,
-    "defenseExitPressureBps": 3500,
-    "buybackKappaBps": 2500,
-    "mildDefenseSpendBps": 200,
-    "severeDefenseSpendBps": 1000,
+    "defenseVolatilityBps": 1000,
+    "defenseExitPressureBps": 7000,
+    "buybackKappaBps": 5000,
+    "mildDefenseSpendBps": 500,
+    "severeDefenseSpendBps": 1500,
     "severeStressThresholdBps": 1000,
-    "recoveryCooldownEpochs": 6
+    "recoveryCooldownEpochs": 2
   },
   "xagc": {
     "rebase": false,
-    "exitFeeBps": 300
+    "exitFeeBps": 100
   },
   "distributionBps": {
-    "xagc": 5000,
+    "xagc": 3000,
     "growthPrograms": 2000,
-    "lp": 1000,
-    "integrators": 500,
-    "treasury": 1500
+    "lp": 2000,
+    "integrators": 1000,
+    "treasury": 2000
   },
   "epochInputs": [
     "priceTwapX18",
@@ -79,6 +95,12 @@
     "grossSellQuoteX18",
     "totalVolumeQuoteX18",
     "depthToTargetSlippageQuoteX18",
+    "stableCashReserveQuoteX18",
+    "riskWeightedReserveQuoteX18",
+    "liquidityDepthQuoteX18",
+    "largestCollateralConcentrationBps",
+    "oracleConfidenceBps",
+    "staleOracleCount",
     "realizedVolatilityBps",
     "xagcDepositsAgc",
     "xagcGrossRedemptionsAgc",

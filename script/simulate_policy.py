@@ -92,6 +92,16 @@ def validate_model(model: dict[str, Any]) -> None:
     total_distribution = sum(model["distributionBps"].values())
     if total_distribution != BPS:
         raise ValueError(f"distributionBps must sum to {BPS}, got {total_distribution}")
+    required_sections = (
+        "reserveCoverageBps",
+        "stableCashCoverageBps",
+        "liquidityDepthCoverageBps",
+        "concentrationBps",
+        "oracle",
+    )
+    for section in required_sections:
+        if section not in model:
+            raise ValueError(f"model missing required section: {section}")
 
 
 def simulate_epoch(
@@ -106,6 +116,10 @@ def simulate_epoch(
     anchor_params = model["anchor"]
     bands = model["bandsBps"]
     reserve_coverage = model["reserveCoverageBps"]
+    stable_cash_coverage_cfg = model["stableCashCoverageBps"]
+    liquidity_depth_coverage_cfg = model["liquidityDepthCoverageBps"]
+    concentration_cfg = model["concentrationBps"]
+    oracle_cfg = model["oracle"]
     distribution_bps = model["distributionBps"]
 
     price_twap_x18 = epoch["priceTwapX18"]
@@ -123,6 +137,19 @@ def simulate_epoch(
     treasury_quote_x18 = state["treasuryQuoteX18"]
     treasury_agc = state["treasuryAgc"]
     xagc_total_assets_agc = state["xagcTotalAssetsAgc"]
+
+    # External-metric defaulting mirrors the on-chain evaluate_epoch:
+    # if an explicit external feed is not provided, fall back to derived values.
+    stable_cash_reserve_quote_x18 = epoch.get("stableCashReserveQuoteX18") or treasury_quote_x18
+    risk_weighted_reserve_quote_x18 = (
+        epoch.get("riskWeightedReserveQuoteX18") or stable_cash_reserve_quote_x18
+    )
+    liquidity_depth_quote_x18 = (
+        epoch.get("liquidityDepthQuoteX18") or depth_to_target_slippage_quote_x18
+    )
+    largest_collateral_concentration_bps = epoch.get("largestCollateralConcentrationBps", 0)
+    oracle_confidence_bps = epoch.get("oracleConfidenceBps", 0)
+    stale_oracle_count = epoch.get("staleOracleCount", 0)
 
     xagc_exit_fee_agc = xagc_gross_redemptions_agc * xagc_cfg["exitFeeBps"] // BPS
     xagc_net_redemption_agc = xagc_gross_redemptions_agc - xagc_exit_fee_agc
@@ -149,7 +176,13 @@ def simulate_epoch(
         )
     exit_pressure_bps = safe_div(gross_sell_quote_x18 * BPS, total_volume_quote_x18)
     reserve_coverage_bps = safe_div(
-        depth_to_target_slippage_quote_x18 * BPS, credit_outstanding_quote_x18
+        risk_weighted_reserve_quote_x18 * BPS, credit_outstanding_quote_x18
+    )
+    stable_cash_coverage_bps = safe_div(
+        stable_cash_reserve_quote_x18 * BPS, credit_outstanding_quote_x18
+    )
+    liquidity_depth_coverage_bps = safe_div(
+        liquidity_depth_quote_x18 * BPS, credit_outstanding_quote_x18
     )
     locked_share_bps = safe_div(xagc_total_assets_agc * BPS, float_supply_agc)
     lock_flow_bps = safe_div(max(xagc_net_deposits_agc, 0) * BPS, float_supply_agc)
@@ -172,9 +205,19 @@ def simulate_epoch(
         anchor_params["maxAnchorCrawlBps"],
     )
 
+    oracle_health_blocked = (
+        oracle_confidence_bps > oracle_cfg["maxConfidenceBps"]
+        or stale_oracle_count > oracle_cfg["maxStaleCount"]
+    )
+    concentration_blocked = (
+        largest_collateral_concentration_bps > concentration_cfg["max"]
+    )
+
     in_defense = (
         price_twap_x18 < stressed_floor_x18
         or reserve_coverage_bps < reserve_coverage["defense"]
+        or stable_cash_coverage_bps < stable_cash_coverage_cfg["defense"]
+        or oracle_health_blocked
         or realized_volatility_bps >= defense["defenseVolatilityBps"]
         or exit_pressure_bps >= defense["defenseExitPressureBps"]
     )
@@ -187,6 +230,10 @@ def simulate_epoch(
         and lock_flow_bps > 0
         and locked_share_bps >= expansion["minLockedShareBps"]
         and reserve_coverage_bps >= reserve_coverage["expansionMin"]
+        and stable_cash_coverage_bps >= stable_cash_coverage_cfg["expansionMin"]
+        and liquidity_depth_coverage_bps >= liquidity_depth_coverage_cfg["expansionMin"]
+        and not concentration_blocked
+        and not oracle_health_blocked
         and realized_volatility_bps <= expansion["maxVolatilityBps"]
         and exit_pressure_bps <= expansion["maxExitPressureBps"]
         and buy_growth_bps > 0
@@ -257,6 +304,24 @@ def simulate_epoch(
                 ),
                 BPS,
             )
+        stable_cash_health_bps = 0
+        if stable_cash_coverage_bps > stable_cash_coverage_cfg["expansionMin"]:
+            stable_cash_health_bps = min(
+                safe_div(
+                    (stable_cash_coverage_bps - stable_cash_coverage_cfg["expansionMin"]) * BPS,
+                    stable_cash_coverage_cfg["target"] - stable_cash_coverage_cfg["expansionMin"],
+                ),
+                BPS,
+            )
+        liquidity_depth_health_bps = 0
+        if liquidity_depth_coverage_bps > liquidity_depth_coverage_cfg["expansionMin"]:
+            liquidity_depth_health_bps = min(
+                safe_div(
+                    (liquidity_depth_coverage_bps - liquidity_depth_coverage_cfg["expansionMin"]) * BPS,
+                    liquidity_depth_coverage_cfg["target"] - liquidity_depth_coverage_cfg["expansionMin"],
+                ),
+                BPS,
+            )
         volatility_health_bps = 0
         if realized_volatility_bps < expansion["maxVolatilityBps"]:
             volatility_health_bps = (
@@ -275,6 +340,8 @@ def simulate_epoch(
         )
         health_score_bps = min(
             reserve_health_bps,
+            stable_cash_health_bps,
+            liquidity_depth_health_bps,
             volatility_health_bps,
             exit_health_bps,
             locked_share_health_bps,
@@ -300,9 +367,26 @@ def simulate_epoch(
     if price_twap_x18 < stressed_floor_x18 and anchor_price_x18 > 0:
         price_stress_bps = (stressed_floor_x18 - price_twap_x18) * BPS // anchor_price_x18
     coverage_stress_bps = max(reserve_coverage["defense"] - reserve_coverage_bps, 0)
+    stable_cash_stress_bps = max(
+        stable_cash_coverage_cfg["defense"] - stable_cash_coverage_bps, 0
+    )
+    concentration_stress_bps = max(
+        largest_collateral_concentration_bps - concentration_cfg["max"], 0
+    )
+    oracle_stress_bps = max(
+        oracle_confidence_bps - oracle_cfg["maxConfidenceBps"], 0
+    )
     exit_stress_bps = max(exit_pressure_bps - defense["defenseExitPressureBps"], 0)
     vol_stress_bps = max(realized_volatility_bps - defense["defenseVolatilityBps"], 0)
-    stress_score_bps = max(price_stress_bps, coverage_stress_bps, exit_stress_bps, vol_stress_bps)
+    stress_score_bps = max(
+        price_stress_bps,
+        coverage_stress_bps,
+        stable_cash_stress_bps,
+        concentration_stress_bps,
+        oracle_stress_bps,
+        exit_stress_bps,
+        vol_stress_bps,
+    )
     if reserve_coverage_bps < reserve_coverage["hardDefense"]:
         stress_score_bps = max(stress_score_bps, defense["severeStressThresholdBps"])
 
@@ -384,6 +468,11 @@ def simulate_epoch(
         "buyGrowthBps": buy_growth_bps,
         "exitPressureBps": exit_pressure_bps,
         "reserveCoverageBps": reserve_coverage_bps,
+        "stableCashCoverageBps": stable_cash_coverage_bps,
+        "liquidityDepthCoverageBps": liquidity_depth_coverage_bps,
+        "largestCollateralConcentrationBps": largest_collateral_concentration_bps,
+        "oracleConfidenceBps": oracle_confidence_bps,
+        "staleOracleCount": stale_oracle_count,
         "lockedShareBps": locked_share_bps,
         "lockFlowBps": lock_flow_bps,
         "demandScoreBps": demand_score_bps,
@@ -397,6 +486,9 @@ def simulate_epoch(
         "grossSellQuoteX18": gross_sell_quote_x18,
         "totalVolumeQuoteX18": total_volume_quote_x18,
         "depthToTargetSlippageQuoteX18": depth_to_target_slippage_quote_x18,
+        "stableCashReserveQuoteX18": stable_cash_reserve_quote_x18,
+        "riskWeightedReserveQuoteX18": risk_weighted_reserve_quote_x18,
+        "liquidityDepthQuoteX18": liquidity_depth_quote_x18,
         "realizedVolatilityBps": realized_volatility_bps,
         "xagcDepositsAgc": xagc_deposits_agc,
         "xagcGrossRedemptionsAgc": xagc_gross_redemptions_agc,
@@ -446,14 +538,12 @@ def render_text_report(simulation: dict[str, Any]) -> str:
     if simulation.get("description"):
         lines.append(simulation["description"])
     header = (
-        "epoch  regime     price   anchor  prem   cov    buys     sells    lock    mint     burn     xagc     t_quote  eff"
+        "epoch  regime     price   anchor  prem   r_cov  sc_cov ld_cov conc   oconf  buys     sells    lock    mint     burn     xagc     t_quote"
     )
     lines.append(header)
     lines.append("-" * len(header))
 
     for epoch in simulation["epochs"]:
-        credit_outstanding = epoch["creditOutstandingQuoteX18"]
-        depth = epoch["depthToTargetSlippageQuoteX18"]
         lines.append(
             f"{(epoch.get('label') or '-'):>4}  "
             f"{epoch['regime']:<9} "
@@ -461,14 +551,17 @@ def render_text_report(simulation: dict[str, Any]) -> str:
             f"{format_price(epoch['anchorPriceX18']):>6} "
             f"{pct_from_bps(epoch['premiumBps']):>6} "
             f"{pct_from_bps(epoch['reserveCoverageBps']):>6} "
+            f"{pct_from_bps(epoch['stableCashCoverageBps']):>6} "
+            f"{pct_from_bps(epoch['liquidityDepthCoverageBps']):>6} "
+            f"{pct_from_bps(epoch['largestCollateralConcentrationBps']):>6} "
+            f"{pct_from_bps(epoch['oracleConfidenceBps']):>6} "
             f"{format_wad(epoch['grossBuyQuoteX18']):>8} "
             f"{format_wad(epoch['grossSellQuoteX18']):>8} "
             f"{pct_from_bps(epoch['lockFlowBps']):>7} "
             f"{format_wad(epoch['mintBudgetAgc']):>8} "
             f"{format_wad(epoch['buybackBurnAgc']):>8} "
             f"{format_wad(epoch['stateAfter']['xagcTotalAssetsAgc']):>8} "
-            f"{format_wad(epoch['stateAfter']['treasuryQuoteX18']):>8} "
-            f"{format_ratio_x(credit_outstanding, depth):>5}"
+            f"{format_wad(epoch['stateAfter']['treasuryQuoteX18']):>8}"
         )
 
     final_state = simulation["finalState"]
