@@ -21,8 +21,8 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 
-import idl from "../../solana/target/idl/agc_solana.json";
-import type { AgcSolana } from "../../solana/target/types/agc_solana";
+import idl from "./agc/agc_solana.json";
+import type { AgcSolana } from "./agc/agc_solana";
 import { solanaAddresses, solanaRpcUrl } from "./contracts";
 
 // Phantom-style provider shape that App.tsx already uses.

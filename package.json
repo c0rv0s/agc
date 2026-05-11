@@ -7,6 +7,7 @@
 		"test:solana": "cd solana && anchor test --skip-build --provider.cluster localnet --validator legacy",
 		"build:web": "vite build --config web/vite.config.ts",
 		"dev:web": "vite --config web/vite.config.ts",
+		"sync:idl": "cp solana/target/idl/agc_solana.json web/src/agc/agc_solana.json && cp solana/target/types/agc_solana.ts web/src/agc/agc_solana.ts",
 		"simulate:epochs": "python3 script/simulate_policy.py"
 	},
 	"dependencies": {

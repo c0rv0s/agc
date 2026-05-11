@@ -4,7 +4,7 @@ import { unpackAccount, unpackMint } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 
-import idl from "../../solana/target/idl/agc_solana.json";
+import idl from "./agc/agc_solana.json";
 import { solanaAddresses, solanaRpcUrl } from "./contracts";
 
 // Subset of the on-chain ProtocolState we surface in the dashboard.

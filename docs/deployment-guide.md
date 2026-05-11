@@ -73,6 +73,8 @@ This produces:
 - `target/idl/agc_solana.json` — the Anchor IDL (frontends and SDKs read this)
 - `target/types/agc_solana.ts` — TypeScript types for the IDL
 
+`solana/target/` is gitignored, so after every program rebuild that changes the IDL run `pnpm sync:idl` from the repo root. That copies the two files into `web/src/agc/` (committed) so Vercel can bundle them — the frontend imports from there, not from `solana/target/`.
+
 ## Deploy (devnet)
 
 ```bash
