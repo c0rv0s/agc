@@ -4,7 +4,22 @@ import {
   flatProtocolDocs,
   protocolDocGroups,
 } from "./protocolDocs";
-import { hasSolanaDeployment, solanaAddresses } from "./contracts";
+import {
+  explorerProgramUrl,
+  hasProgramDeployment,
+  hasSolanaDeployment,
+  showJupiterSwap,
+  solanaAddresses,
+  solanaCluster,
+} from "./contracts";
+import {
+  formatAgc,
+  formatBps,
+  formatPrice,
+  formatUsdc,
+  regimeLabel,
+  useProtocolSnapshot,
+} from "./useProtocolState";
 
 const docsHref = "/docs";
 const xProfileHref = "https://x.com/AgentCreditSOL";
@@ -829,7 +844,8 @@ function DashboardPage() {
   const [txNote, setTxNote] = useState<string | null>(null);
 
   const ready = hasSolanaDeployment;
-  const regimeKey = "neutral";
+  const snapshot = useProtocolSnapshot();
+  const regimeKey = snapshot.state?.regime ?? "neutral";
   const shortAddr = walletAddress ? shortKey(walletAddress) : null;
 
   useEffect(() => {
@@ -887,51 +903,96 @@ function DashboardPage() {
     );
   }
 
+  const treasuryDollarValue = (() => {
+    if (!snapshot.balances || !snapshot.state) return null;
+    // Treasury USDC at face value + treasury AGC at anchor price (both → quote x18 → dollars)
+    const usdcDollars = snapshot.balances.treasuryUsdc / 1_000_000n; // USDC has 6 decimals
+    const agcUnits = snapshot.balances.treasuryAgc / 1_000_000_000n; // AGC has 9 decimals
+    const agcDollars = (agcUnits * snapshot.state.anchorPriceX18) / 10n ** 18n;
+    return usdcDollars + agcDollars;
+  })();
+
   const telemetry = [
     {
       label: "Regime",
-      value: " - ",
+      value: regimeLabel(snapshot.state?.regime),
       detail: "policy account",
     },
     {
       label: "Anchor",
-      value: " - ",
+      value: snapshot.state ? formatPrice(snapshot.state.anchorPriceX18) : " - ",
       detail: "soft reference",
     },
     {
       label: "Coverage",
-      value: " - ",
+      value: snapshot.state ? formatBps(snapshot.state.lastReserveCoverageBps) : " - ",
       detail: "risk-weighted",
     },
     {
       label: "Credit",
-      value: " - ",
+      value: snapshot.state
+        ? `${formatAgc(snapshot.state.creditPrincipalOutstandingAgc)} AGC`
+        : " - ",
       detail: "principal outstanding",
     },
     {
       label: "Treasury",
-      value: " - ",
-      detail: "USDC / USDT",
+      value:
+        treasuryDollarValue !== null && treasuryDollarValue >= 0n
+          ? `$${treasuryDollarValue >= 1_000_000n
+              ? `${(Number(treasuryDollarValue) / 1_000_000).toFixed(2)}M`
+              : treasuryDollarValue >= 1_000n
+                ? `${(Number(treasuryDollarValue) / 1_000).toFixed(2)}k`
+                : treasuryDollarValue.toString()}`
+          : " - ",
+      detail: "USDC + AGC (anchor-valued)",
     },
     {
       label: "Program",
       value: shortKey(solanaAddresses.programId),
-      detail: "Solana",
+      detail: solanaCluster,
     },
   ];
 
-  const operatingMetrics = [
+  const operatingMetrics: readonly (readonly [string, string])[] = [
     ["Program ID", shortKey(solanaAddresses.programId)],
-    ["Protocol state", shortKey(solanaAddresses.state)],
-    ["AGC mint", shortKey(solanaAddresses.agcMint)],
-    ["xAGC mint", shortKey(solanaAddresses.xagcMint)],
-    ["USDC mint", shortKey(solanaAddresses.usdcMint)],
-    ["Treasury USDC", shortKey(solanaAddresses.treasuryUsdc)],
-    ["Credit facilities", "Collateralized AGC lines"],
-    ["Underwriter vaults", "First-loss AGC reserves"],
-    ["Oracle cache", "Pyth per collateral mint"],
-    ["Buyback path", "TWAP campaign burn escrow"],
-  ] as const;
+    ["Cluster", solanaCluster],
+    ["Last settled epoch", snapshot.state?.lastSettledEpoch.toString() ?? " - "],
+    ["AGC supply", snapshot.balances ? `${formatAgc(snapshot.balances.agcSupply)} AGC` : " - "],
+    ["xAGC supply", snapshot.balances ? `${formatAgc(snapshot.balances.xagcSupply)} xAGC` : " - "],
+    [
+      "xAGC vault assets",
+      snapshot.balances ? `${formatAgc(snapshot.balances.xagcVaultAgc)} AGC` : " - ",
+    ],
+    [
+      "Underwriter vault",
+      snapshot.balances ? `${formatAgc(snapshot.balances.underwriterVaultAgc)} AGC` : " - ",
+    ],
+    [
+      "Treasury AGC",
+      snapshot.balances ? `${formatAgc(snapshot.balances.treasuryAgc)} AGC` : " - ",
+    ],
+    [
+      "Treasury USDC",
+      snapshot.balances ? formatUsdc(snapshot.balances.treasuryUsdc) : " - ",
+    ],
+    [
+      "Credit drawn (cumulative)",
+      snapshot.state ? `${formatAgc(snapshot.state.creditDrawnAgc)} AGC` : " - ",
+    ],
+    [
+      "Credit repaid (cumulative)",
+      snapshot.state ? `${formatAgc(snapshot.state.creditRepaidAgc)} AGC` : " - ",
+    ],
+    [
+      "Premium (last epoch)",
+      snapshot.state ? formatBps(snapshot.state.lastPremiumBps) : " - ",
+    ],
+    [
+      "Locked share (last epoch)",
+      snapshot.state ? formatBps(snapshot.state.lastLockedShareBps) : " - ",
+    ],
+  ];
 
   const txState =
     txStatus === "Idle" ? "idle" : txStatus.includes("complete") ? "complete" : "active";
@@ -1004,11 +1065,38 @@ function DashboardPage() {
 
       {!ready && (
         <section className="notice">
-          <strong>Deployment addresses are not configured in this environment.</strong>
-          <span>
-            Live telemetry and wallet operations populate after the Solana
-            program addresses are connected.
-          </span>
+          {hasProgramDeployment ? (
+            <>
+              <strong>
+                Program deployed to {solanaCluster}, protocol not yet initialized.
+              </strong>
+              <span>
+                The Solana program is live at{" "}
+                {explorerProgramUrl(solanaAddresses.programId) ? (
+                  <a
+                    href={explorerProgramUrl(solanaAddresses.programId) ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {shortKey(solanaAddresses.programId)}
+                  </a>
+                ) : (
+                  shortKey(solanaAddresses.programId)
+                )}
+                . Live telemetry and wallet operations come online after{" "}
+                <code>initialize_protocol</code> creates the AGC/xAGC mints and
+                treasury accounts.
+              </span>
+            </>
+          ) : (
+            <>
+              <strong>Deployment addresses are not configured in this environment.</strong>
+              <span>
+                Live telemetry and wallet operations populate after the Solana
+                program addresses are connected.
+              </span>
+            </>
+          )}
         </section>
       )}
 
@@ -1026,7 +1114,28 @@ function DashboardPage() {
           </div>
 
           <div className="operation-grid">
-            <JupiterSwapPanel />
+            {showJupiterSwap ? (
+              <JupiterSwapPanel />
+            ) : (
+              <article className="operation-panel">
+                <div className="panel-header">
+                  <span className="card-label">Market</span>
+                  <h3>Swap AGC</h3>
+                </div>
+                <div className="plugin-empty-state">
+                  <strong>Mainnet only</strong>
+                  <span>
+                    Jupiter routes against mainnet liquidity. On {solanaCluster} the
+                    protocol mechanics below — xAGC vault, credit facility, settlement
+                    distribution — are the live demo surface.
+                  </span>
+                </div>
+                <p className="panel-meta">
+                  Connect a {solanaCluster} wallet, then use the credit and xAGC
+                  panels to interact with the deployed program directly.
+                </p>
+              </article>
+            )}
 
             <article id="vaults" className="operation-panel">
               <div className="panel-header">
@@ -1182,7 +1291,20 @@ function DashboardPage() {
 
       <footer className="footer">
         <span>AGC / Jupiter market / expansion control / xAGC vault / credit facilities</span>
-        <span>Program: {shortKey(solanaAddresses.programId)}</span>
+        <span>
+          {solanaCluster}:{" "}
+          {explorerProgramUrl(solanaAddresses.programId) ? (
+            <a
+              href={explorerProgramUrl(solanaAddresses.programId) ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {shortKey(solanaAddresses.programId)}
+            </a>
+          ) : (
+            shortKey(solanaAddresses.programId)
+          )}
+        </span>
       </footer>
     </main>
   );

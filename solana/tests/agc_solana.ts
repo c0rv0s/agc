@@ -851,6 +851,217 @@ describe("agc_solana local validator", () => {
         "all defaulted-line collateral should move to reserve",
       );
     });
+
+    it("settles an epoch and routes the expansion mint budget to recipients", async function () {
+      this.timeout(60000);
+
+      // Shrink the policy window for the test and relax gates that the prior
+      // tests didn't set up state for:
+      //   - shorter epoch_duration so we don't wait 1h
+      //   - persistence=1 so one healthy epoch establishes a premium history
+      //   - min_locked_share_bps=1 (we only have ~50 bps locked; default is 1000)
+      //   - lower demand-side and reserve targets so the test state (~10 bps
+      //     lock_flow, ~60 bps locked_share, ~3000 bps reserve coverage)
+      //     produces full demand+health scores rather than near-zero.
+      const fastParams = policyParams();
+      fastParams.policyEpochDuration = new anchor.BN(2);
+      fastParams.premiumPersistenceRequired = 1;
+      fastParams.minLockedShareBps = 1;
+      fastParams.targetGrossBuyBps = 50;
+      fastParams.targetNetBuyBps = 50;
+      fastParams.targetLockFlowBps = 5;
+      fastParams.targetBuyGrowthBps = 100;
+      fastParams.targetLockedShareBps = 30;
+      fastParams.targetReserveCoverageBps = 3010;
+      fastParams.targetStableCashCoverageBps = 1300;
+      fastParams.targetLiquidityDepthCoverageBps = 2100;
+
+      await program.methods
+        .setPolicyParams(fastParams)
+        .accountsStrict({ state, authority: admin.publicKey })
+        .signers([admin])
+        .rpc();
+
+      const recordBuy = (usdc: number, priceX18: string) =>
+        program.methods
+          .recordSwap({
+            agcAmount: new anchor.BN(0),
+            usdcAmount: new anchor.BN(usdc),
+            priceX18: new anchor.BN(priceX18),
+            agcToUsdc: false,
+            hookFeeUsdc: new anchor.BN(0),
+            hookFeeAgc: new anchor.BN(0),
+          })
+          .accountsStrict({
+            state,
+            authority: admin.publicKey,
+            keeper: admin.publicKey,
+          })
+          .signers([admin])
+          .rpc();
+
+      const recordSell = (usdc: number, priceX18: string) =>
+        program.methods
+          .recordSwap({
+            agcAmount: new anchor.BN(0),
+            usdcAmount: new anchor.BN(usdc),
+            priceX18: new anchor.BN(priceX18),
+            agcToUsdc: true,
+            hookFeeUsdc: new anchor.BN(0),
+            hookFeeAgc: new anchor.BN(0),
+          })
+          .accountsStrict({
+            state,
+            authority: admin.publicKey,
+            keeper: admin.publicKey,
+          })
+          .signers([admin])
+          .rpc();
+
+      const healthy = {
+        depthToTargetSlippageQuoteX18: new anchor.BN("250000000000000000000000"),
+        stableCashReserveQuoteX18: new anchor.BN("200000000000000000000000"),
+        riskWeightedReserveQuoteX18: new anchor.BN("300000000000000000000000"),
+        liquidityDepthQuoteX18: new anchor.BN("250000000000000000000000"),
+        largestCollateralConcentrationBps: 4500,
+        oracleConfidenceBps: 25,
+        staleOracleCount: 0,
+      };
+
+      const settle = () =>
+        program.methods
+          .settleEpoch(healthy)
+          .accountsStrict({
+            state,
+            authority: admin.publicKey,
+            keeper: admin.publicKey,
+            agcMint,
+            xagcMint,
+            xagcVaultAgc,
+            treasuryAgc,
+            treasuryUsdc,
+            growthProgramsAgc: growthAgc,
+            lpAgc,
+            integratorsAgc,
+            mintAuthority,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([admin])
+          .rpc();
+
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+      // Cycle 1 — baseline. buy_growth_bps is 0 on first settle (no prior
+      // gross_buy), so this epoch can't reach Expansion. The goal here is to
+      // populate state.last_gross_buy_quote_x18 so cycle 2's growth gate works.
+      await recordBuy(5_000_000_000, "1020000000000000000"); // 5k USDC @ 1.02
+      await recordSell(1_000_000_000, "1020000000000000000"); // 1k USDC @ 1.02
+      await sleep(2500);
+      await settle();
+
+      const state1 = await program.account.protocolState.fetch(state);
+      assert.equal(state1.lastSettledEpoch.toString(), "1");
+
+      // Top up xAGC so cycle 2 has positive lock_flow (vault_flows tracks the
+      // delta since the last settlement, and settle 1 just rolled the marker).
+      const xagcReceiver = (
+        await getOrCreateAssociatedTokenAccount(
+          provider.connection,
+          admin,
+          xagcMint,
+          underwriter.publicKey,
+        )
+      ).address;
+      await program.methods
+        .depositXagc(new anchor.BN("1000000000000")) // 1k AGC
+        .accountsStrict({
+          state,
+          depositor: underwriter.publicKey,
+          depositorAgc: underwriterAgc,
+          xagcVaultAgc,
+          xagcMint,
+          receiverXagc: xagcReceiver,
+          mintAuthority,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([underwriter])
+        .rpc();
+
+      // Cycle 2 — bigger buys than cycle 1 so buy_growth > 0.
+      await recordBuy(10_000_000_000, "1025000000000000000"); // 10k USDC @ 1.025
+      await recordSell(1_000_000_000, "1025000000000000000");
+
+      const before = {
+        growth: BigInt((await getAccount(provider.connection, growthAgc)).amount.toString()),
+        lp: BigInt((await getAccount(provider.connection, lpAgc)).amount.toString()),
+        integrators: BigInt(
+          (await getAccount(provider.connection, integratorsAgc)).amount.toString(),
+        ),
+        xagcVault: BigInt(
+          (await getAccount(provider.connection, xagcVaultAgc)).amount.toString(),
+        ),
+        treasury: BigInt(
+          (await getAccount(provider.connection, treasuryAgc)).amount.toString(),
+        ),
+      };
+
+      await sleep(2500);
+      await settle();
+
+      const state2 = await program.account.protocolState.fetch(state);
+      assert.equal(state2.lastSettledEpoch.toString(), "2");
+      assert.deepEqual(
+        state2.regime,
+        { expansion: {} } as never,
+        "regime should be Expansion in cycle 2",
+      );
+
+      const after = {
+        growth: BigInt((await getAccount(provider.connection, growthAgc)).amount.toString()),
+        lp: BigInt((await getAccount(provider.connection, lpAgc)).amount.toString()),
+        integrators: BigInt(
+          (await getAccount(provider.connection, integratorsAgc)).amount.toString(),
+        ),
+        xagcVault: BigInt(
+          (await getAccount(provider.connection, xagcVaultAgc)).amount.toString(),
+        ),
+        treasury: BigInt(
+          (await getAccount(provider.connection, treasuryAgc)).amount.toString(),
+        ),
+      };
+
+      const growthDelta = after.growth - before.growth;
+      const lpDelta = after.lp - before.lp;
+      const intDelta = after.integrators - before.integrators;
+      const xagcDelta = after.xagcVault - before.xagcVault;
+      const treasuryDelta = after.treasury - before.treasury;
+
+      assert.ok(growthDelta > 0n, "growth received AGC");
+      assert.ok(lpDelta > 0n, "lp received AGC");
+      assert.ok(intDelta > 0n, "integrators received AGC");
+      assert.ok(xagcDelta > 0n, "xagc vault received AGC");
+      assert.ok(treasuryDelta > 0n, "treasury received AGC");
+
+      // Distribution bps: xagc=3000, growth=2000, lp=2000, integrators=1000,
+      // treasury=2000. Verify the recipient ratios match.
+      assert.equal(growthDelta, lpDelta, "growth and lp shares equal (same bps)");
+      assert.equal(
+        growthDelta / 2n,
+        intDelta,
+        "integrators share == half of growth (1000 vs 2000 bps)",
+      );
+      assert.ok(xagcDelta > growthDelta, "xagc share larger than growth (3000 > 2000 bps)");
+
+      // Verify total budget accounting: mint_budget_acp on state should equal
+      // sum of recipient deltas.
+      const totalMinted = growthDelta + lpDelta + intDelta + xagcDelta + treasuryDelta;
+      const epochResult = state2.lastEpochResult;
+      assert.equal(
+        totalMinted.toString(),
+        epochResult.mintBudgetAcp.toString(),
+        "sum of recipient deltas == mint_budget_acp",
+      );
+    });
   });
 });
 

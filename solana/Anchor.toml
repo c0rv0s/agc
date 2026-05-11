@@ -8,6 +8,9 @@ skip-lint = false
 [programs.localnet]
 agc_solana = "H1n8VTp6pMY5WFfVfi4MNkQ9q5szkMpVWcHQ21JRETXC"
 
+[programs.devnet]
+agc_solana = "H1n8VTp6pMY5WFfVfi4MNkQ9q5szkMpVWcHQ21JRETXC"
+
 [registry]
 url = "https://api.apr.dev"
 
