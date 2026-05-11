@@ -20,6 +20,16 @@ import {
   regimeLabel,
   useProtocolSnapshot,
 } from "./useProtocolState";
+import {
+  depositCollateral,
+  depositXagc,
+  drawCredit,
+  explorerTxUrl,
+  redeemXagc,
+  repayCredit,
+  underwriteAgc,
+} from "./transactions";
+import { PublicKey } from "@solana/web3.js";
 
 const docsHref = "/docs";
 const xProfileHref = "https://x.com/AgentCreditSOL";
@@ -886,7 +896,10 @@ function DashboardPage() {
     setWalletAddress(null);
   }
 
-  function runSolanaAction(status: string) {
+  async function submitTx(
+    label: string,
+    builder: (wallet: PublicKey) => Promise<string>,
+  ) {
     if (!ready) {
       setTxStatus("Idle");
       setTxNote("Deployment addresses are not configured in this environment.");
@@ -897,10 +910,22 @@ function DashboardPage() {
       setTxNote("Connect a Solana wallet first.");
       return;
     }
-    setTxStatus(status);
-    setTxNote(
-      "Live Solana transactions activate after the deployed IDL client is configured.",
-    );
+    setTxStatus(`${label}...`);
+    setTxNote(null);
+    try {
+      const sig = await builder(new PublicKey(walletAddress));
+      setTxStatus(`${label} complete`);
+      setTxNote(
+        `Signature ${sig.slice(0, 8)}...${sig.slice(-8)} — ` +
+          `view on Solana Explorer (${solanaCluster}).`,
+      );
+      // Surface the explorer URL via the browser console; clicking the note
+      // text in the UI is left to a follow-up.
+      console.log(`${label} tx:`, explorerTxUrl(sig, solanaCluster));
+    } catch (error) {
+      setTxStatus("Idle");
+      setTxNote(extractErrorMessage(error));
+    }
   }
 
   const treasuryDollarValue = (() => {
@@ -1172,14 +1197,18 @@ function DashboardPage() {
                 <button
                   className="button button-primary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Depositing AGC")}
+                  onClick={() =>
+                    submitTx("Deposit AGC", (wallet) => depositXagc(wallet, stakeAgcAmount))
+                  }
                 >
                   Deposit AGC
                 </button>
                 <button
                   className="button button-secondary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Redeeming xAGC")}
+                  onClick={() =>
+                    submitTx("Redeem xAGC", (wallet) => redeemXagc(wallet, redeemXagcShares))
+                  }
                 >
                   Redeem xAGC
                 </button>
@@ -1233,28 +1262,40 @@ function DashboardPage() {
                 <button
                   className="button button-primary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Depositing underwriter AGC")}
+                  onClick={() =>
+                    submitTx("Underwrite AGC", (wallet) =>
+                      underwriteAgc(wallet, underwriteAmount),
+                    )
+                  }
                 >
                   Underwrite
                 </button>
                 <button
                   className="button button-secondary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Depositing collateral")}
+                  onClick={() =>
+                    submitTx("Deposit collateral", (wallet) =>
+                      depositCollateral(wallet, collateralAmount),
+                    )
+                  }
                 >
                   Add collateral
                 </button>
                 <button
                   className="button button-secondary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Drawing AGC credit")}
+                  onClick={() =>
+                    submitTx("Draw AGC", (wallet) => drawCredit(wallet, drawAmount))
+                  }
                 >
                   Draw
                 </button>
                 <button
                   className="button button-secondary"
                   disabled={!walletAddress || !ready}
-                  onClick={() => runSolanaAction("Repaying AGC credit")}
+                  onClick={() =>
+                    submitTx("Repay AGC", (wallet) => repayCredit(wallet, repayAmount))
+                  }
                 >
                   Repay
                 </button>

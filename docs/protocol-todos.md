@@ -21,8 +21,8 @@ Remaining work checklist toward production launch of the Solana program and web 
 - [x] Wire the dashboard to the deployed Solana IDL/client. ([`web/src/useProtocolState.ts`](../web/src/useProtocolState.ts) fetches `ProtocolState` + token balances on a 5s interval.)
 - [x] Read live `ProtocolState`, treasury token accounts, xAGC vault, and AGC/xAGC mint supplies in the hero tiles + operating metrics. Collateral registry / per-facility detail pages still pending.
 - [x] Hide the Jupiter swap panel on non-mainnet clusters (it requires mainnet liquidity to be useful). Re-enables automatically when `VITE_SOLANA_CLUSTER=mainnet-beta`.
-- [ ] Submit live xAGC deposit/redeem transactions from the dashboard buttons.
-- [ ] Submit live credit facility transactions from the dashboard buttons: underwrite, deposit collateral, draw, repay, withdraw.
+- [x] Submit live xAGC deposit/redeem transactions from the dashboard buttons. ([`web/src/transactions.ts`](../web/src/transactions.ts) builds instructions and signs via the injected Phantom/Solflare provider.)
+- [x] Submit live credit facility transactions: underwrite, deposit collateral, draw, repay. Withdraw still pending. Caller-side prerequisites (admin-opened line, posted collateral) are documented in [`deployment-guide.md`](deployment-guide.md).
 - [ ] Add facility detail pages for collateral health, maturity, debt, reserve coverage, underwriter reserve, and default state.
 - [ ] Re-enable Jupiter swap panel once AGC has live mainnet liquidity.
 

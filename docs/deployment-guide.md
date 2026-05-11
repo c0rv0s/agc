@@ -27,6 +27,23 @@ How to build, deploy, and bootstrap the Agent Credit Protocol on a Solana cluste
 
 Initial state: 10M AGC pre-minted to the deployer wallet; BTC oracle at $100k; credit facility limits 100k AGC per line, 1M AGC total. The complete address list (including PDAs and settlement-recipient ATAs) lives in `deployments/devnet.json` after running the bootstrap.
 
+### Dashboard buttons (interactive demo)
+
+The dashboard at `pnpm dev:web` wires all six action buttons to live program calls via Anchor + the injected Solana wallet:
+
+| Button | Instruction | Caller needs |
+| --- | --- | --- |
+| `Deposit AGC` | `deposit_xagc` | AGC in the connected wallet |
+| `Redeem xAGC` | `redeem_xagc` | xAGC shares in the connected wallet |
+| `Underwrite AGC` | `deposit_underwriter_agc` | AGC in the connected wallet |
+| `Deposit collateral` | `deposit_credit_collateral` | BTC + an admin-opened line for the wallet |
+| `Draw AGC` | `draw_credit_line` | An admin-opened line + posted collateral |
+| `Repay AGC` | `repay_credit_line` | An admin-opened line with debt + AGC to repay with |
+
+**Demo-wallet setup for the video:** import the deployer keypair (`~/.config/solana/id.json`) into Phantom or Solflare and switch the wallet to **Devnet**. That wallet already holds 10M AGC + ~1 BTC from the bootstrap and has a pre-opened credit line (`line_id=1`) from the `borrow.ts` demo run. With it connected, all six buttons work directly.
+
+For visitors that connect with an empty wallet, the xAGC and underwrite buttons will return "insufficient funds" — the credit-side buttons additionally need a line opened by the admin first. There is no public faucet; if you want to give a visitor demo tokens, transfer AGC/BTC from the deployer wallet and run `script/demo/borrow.ts` against their pubkey (or generalize that script with a `--borrower` flag).
+
 ### Demo scripts (`script/demo/*.ts`)
 
 Run with `pnpm exec tsx script/demo/<name>.ts`. All drive transactions against the devnet program above using the deployer wallet.
