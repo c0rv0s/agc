@@ -223,17 +223,17 @@ function shortKey(value: string | null | undefined) {
 
 function DashboardPage() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [stakeAgcAmount, setStakeAgcAmount] = useState("50");
-  const [redeemXagcShares, setRedeemXagcShares] = useState("10");
-  const [underwriteAmount, setUnderwriteAmount] = useState("1000");
-  const [collateralAmount, setCollateralAmount] = useState("0.25");
-  const [drawAmount, setDrawAmount] = useState("250");
-  const [repayAmount, setRepayAmount] = useState("100");
+  const [stakeAgcAmount, setStakeAgcAmount] = useState("");
+  const [redeemXagcShares, setRedeemXagcShares] = useState("");
+  const [underwriteAmount, setUnderwriteAmount] = useState("");
+  const [collateralAmount, setCollateralAmount] = useState("");
+  const [drawAmount, setDrawAmount] = useState("");
+  const [repayAmount, setRepayAmount] = useState("");
   const [txStatus, setTxStatus] = useState("Idle");
   const [txNote, setTxNote] = useState<string | null>(null);
 
   const ready = hasSolanaDeployment;
-  const snapshot = useProtocolSnapshot();
+  const snapshot = useProtocolSnapshot(walletAddress);
   const regimeKey = snapshot.state?.regime ?? "neutral";
   const shortAddr = walletAddress ? shortKey(walletAddress) : null;
 
@@ -552,25 +552,39 @@ function DashboardPage() {
                   label="Deposit AGC"
                   value={stakeAgcAmount}
                   onChange={setStakeAgcAmount}
-                  placeholder="50.0"
+                  placeholder="100"
                 />
                 <Field
                   id="redeem-xagc"
                   label="Redeem xAGC shares"
                   value={redeemXagcShares}
                   onChange={setRedeemXagcShares}
-                  placeholder="10.0"
+                  placeholder="50"
                 />
               </div>
               <div className="vault-metrics">
-                <span>Wallet: <strong>{shortKey(walletAddress)}</strong></span>
-                <span>AGC mint: <strong>{shortKey(solanaAddresses.agcMint)}</strong></span>
-                <span>xAGC mint: <strong>{shortKey(solanaAddresses.xagcMint)}</strong></span>
-                <span>Reserve: <strong>{shortKey(solanaAddresses.xagcVaultAgc)}</strong></span>
+                <span>
+                  Your AGC:{" "}
+                  <strong>
+                    {snapshot.userBalances
+                      ? formatAgc(snapshot.userBalances.agc)
+                      : walletAddress
+                        ? "Loading..."
+                        : " - "}
+                  </strong>
+                </span>
+                <span>
+                  Your xAGC:{" "}
+                  <strong>
+                    {snapshot.userBalances
+                      ? formatAgc(snapshot.userBalances.xagc)
+                      : walletAddress
+                        ? "Loading..."
+                        : " - "}
+                  </strong>
+                </span>
                 <span>Share px: <strong>On-chain</strong></span>
                 <span>Exit fee: <strong>Policy state</strong></span>
-                <span>Deposit: <strong>{stakeAgcAmount || " - "} AGC</strong></span>
-                <span>Redeem: <strong>{redeemXagcShares || " - "} xAGC</strong></span>
               </div>
               <div className="panel-actions">
                 <button
@@ -605,33 +619,53 @@ function DashboardPage() {
                   label="Underwrite AGC"
                   value={underwriteAmount}
                   onChange={setUnderwriteAmount}
-                  placeholder="1000.0"
+                  placeholder="1000"
                 />
                 <Field
                   id="credit-collateral"
                   label="Collateral"
                   value={collateralAmount}
                   onChange={setCollateralAmount}
-                  placeholder="0.25"
+                  placeholder="0.1"
                 />
                 <Field
                   id="credit-draw"
                   label="Draw AGC"
                   value={drawAmount}
                   onChange={setDrawAmount}
-                  placeholder="250.0"
+                  placeholder="200"
                 />
                 <Field
                   id="credit-repay"
                   label="Repay AGC"
                   value={repayAmount}
                   onChange={setRepayAmount}
-                  placeholder="100.0"
+                  placeholder="100"
                 />
               </div>
               <div className="vault-metrics">
-                <span>Facility: <strong>Per collateral mint</strong></span>
-                <span>Collateral: <strong>USDC / USDT / BTC / isolated RWA</strong></span>
+                <span>
+                  Your BTC:{" "}
+                  <strong>
+                    {snapshot.userBalances
+                      ? (Number(snapshot.userBalances.btc) / 1e8).toLocaleString(undefined, {
+                          maximumFractionDigits: 4,
+                        })
+                      : walletAddress
+                        ? "Loading..."
+                        : " - "}
+                  </strong>
+                </span>
+                <span>
+                  Your AGC:{" "}
+                  <strong>
+                    {snapshot.userBalances
+                      ? formatAgc(snapshot.userBalances.agc)
+                      : walletAddress
+                        ? "Loading..."
+                        : " - "}
+                  </strong>
+                </span>
                 <span>Health: <strong>Collateral value / AGC debt</strong></span>
                 <span>Backstop: <strong>Underwriter first loss</strong></span>
                 <span>Interest: <strong>Paid to underwriters</strong></span>

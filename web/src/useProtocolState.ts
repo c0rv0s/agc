@@ -1,6 +1,10 @@
 import { BorshAccountsCoder } from "@coral-xyz/anchor";
 import type { Idl } from "@coral-xyz/anchor";
-import { unpackAccount, unpackMint } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddressSync,
+  unpackAccount,
+  unpackMint,
+} from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { useEffect, useState } from "react";
 
@@ -34,17 +38,25 @@ export interface TokenBalances {
   xagcSupply: bigint;
 }
 
+export interface UserBalances {
+  agc: bigint;
+  xagc: bigint;
+  btc: bigint;
+}
+
 export interface ProtocolSnapshot {
   state: ProtocolStateView | null;
   balances: TokenBalances | null;
+  userBalances: UserBalances | null;
   error: string | null;
   lastFetchedAt: number | null;
 }
 
 function regimeFromVariant(variant: Record<string, unknown>): ProtocolStateView["regime"] {
-  if (variant.expansion) return "expansion";
-  if (variant.defense) return "defense";
-  if (variant.recovery) return "recovery";
+  // Anchor's IDL decoder uses the Rust enum's PascalCase variant names.
+  if (variant.Expansion || variant.expansion) return "expansion";
+  if (variant.Defense || variant.defense) return "defense";
+  if (variant.Recovery || variant.recovery) return "recovery";
   return "neutral";
 }
 
@@ -58,10 +70,14 @@ function toBigInt(value: unknown): bigint {
   return 0n;
 }
 
-export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
+export function useProtocolSnapshot(
+  walletAddress: string | null = null,
+  refreshMs = 5000,
+): ProtocolSnapshot {
   const [snapshot, setSnapshot] = useState<ProtocolSnapshot>({
     state: null,
     balances: null,
+    userBalances: null,
     error: null,
     lastFetchedAt: null,
   });
@@ -73,7 +89,7 @@ export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
 
     async function fetchOnce() {
       try {
-        const keys = [
+        const baseKeys = [
           new PublicKey(solanaAddresses.state),
           new PublicKey(solanaAddresses.treasuryAgc),
           new PublicKey(solanaAddresses.treasuryUsdc),
@@ -82,6 +98,17 @@ export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
           new PublicKey(solanaAddresses.agcMint),
           new PublicKey(solanaAddresses.xagcMint),
         ];
+        const wallet = walletAddress ? new PublicKey(walletAddress) : null;
+        const userAtas = wallet
+          ? {
+              agc: getAssociatedTokenAddressSync(new PublicKey(solanaAddresses.agcMint), wallet),
+              xagc: getAssociatedTokenAddressSync(new PublicKey(solanaAddresses.xagcMint), wallet),
+              btc: getAssociatedTokenAddressSync(new PublicKey(solanaAddresses.btcMint), wallet),
+            }
+          : null;
+        const keys = userAtas
+          ? [...baseKeys, userAtas.agc, userAtas.xagc, userAtas.btc]
+          : baseKeys;
         const infos = await connection.getMultipleAccountsInfo(keys);
 
         const stateInfo = infos[0];
@@ -93,21 +120,21 @@ export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
               >;
               return {
                 regime: regimeFromVariant(decoded.regime as Record<string, unknown>),
-                anchorPriceX18: toBigInt(decoded.anchorPriceX18),
-                lastSettledEpoch: toBigInt(decoded.lastSettledEpoch),
-                lastReserveCoverageBps: toBigInt(decoded.lastCoverageBps),
-                lastStableCashCoverageBps: toBigInt(decoded.lastStableCashCoverageBps),
-                lastPremiumBps: toBigInt(decoded.lastPremiumBps),
-                lastLockedShareBps: toBigInt(decoded.lastLockedShareBps),
-                lastExitPressureBps: toBigInt(decoded.lastExitPressureBps),
-                lastVolatilityBps: toBigInt(decoded.lastVolatilityBps),
+                anchorPriceX18: toBigInt(decoded.anchor_price_x18),
+                lastSettledEpoch: toBigInt(decoded.last_settled_epoch),
+                lastReserveCoverageBps: toBigInt(decoded.last_coverage_bps),
+                lastStableCashCoverageBps: toBigInt(decoded.last_stable_cash_coverage_bps),
+                lastPremiumBps: toBigInt(decoded.last_premium_bps),
+                lastLockedShareBps: toBigInt(decoded.last_locked_share_bps),
+                lastExitPressureBps: toBigInt(decoded.last_exit_pressure_bps),
+                lastVolatilityBps: toBigInt(decoded.last_volatility_bps),
                 creditPrincipalOutstandingAgc: toBigInt(
-                  decoded.creditPrincipalOutstandingAgc,
+                  decoded.credit_principal_outstanding_agc,
                 ),
-                creditDrawnAgc: toBigInt(decoded.creditDrawnAgc),
-                creditRepaidAgc: toBigInt(decoded.creditRepaidAgc),
-                creditInterestPaidAgc: toBigInt(decoded.creditInterestPaidAgc),
-                creditDefaultedAgc: toBigInt(decoded.creditDefaultedAgc),
+                creditDrawnAgc: toBigInt(decoded.credit_drawn_agc),
+                creditRepaidAgc: toBigInt(decoded.credit_repaid_agc),
+                creditInterestPaidAgc: toBigInt(decoded.credit_interest_paid_agc),
+                creditDefaultedAgc: toBigInt(decoded.credit_defaulted_agc),
               };
             })()
           : null;
@@ -133,11 +160,19 @@ export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
           agcSupply: mintSupply(5),
           xagcSupply: mintSupply(6),
         };
+        const userBalances: UserBalances | null = userAtas
+          ? {
+              agc: tokenAt(7),
+              xagc: tokenAt(8),
+              btc: tokenAt(9),
+            }
+          : null;
 
         if (!cancelled) {
           setSnapshot({
             state: stateView,
             balances,
+            userBalances,
             error: null,
             lastFetchedAt: Date.now(),
           });
@@ -158,7 +193,7 @@ export function useProtocolSnapshot(refreshMs = 5000): ProtocolSnapshot {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [refreshMs]);
+  }, [refreshMs, walletAddress]);
 
   return snapshot;
 }
