@@ -131,8 +131,8 @@ async function main() {
 
   // Cycle 1
   console.log("Step 2: recording cycle 1 swaps (price $1.02, premium ~200 bps)...");
-  await recordSwap(5_000_000_000, "1020000000000000000", false); // 5k USDC buy
-  await recordSwap(1_000_000_000, "1020000000000000000", true); // 1k USDC sell
+  await recordSwap(5_000_000_000, "1040000000000000000", false); // 5k USDC buy @ $1.04
+  await recordSwap(1_000_000_000, "1040000000000000000", true); // 1k USDC sell @ $1.04
   console.log("Step 3: waiting 3s for epoch window...");
   await sleep(3000);
   console.log("Step 4: settling cycle 1 (expected Neutral — buy_growth=0 first epoch)...");
@@ -142,10 +142,10 @@ async function main() {
 
   // Top up xAGC so cycle 2 has positive lock_flow. (After cycle 1 settle, the
   // gross-deposit watermark is rolled forward, so cycle 2 needs new flow.)
-  // Need net_deposits * 10000 ≥ float to produce lock_flow_bps ≥ 1. Float is
-  // ~10M AGC after bootstrap, so we deposit 10k to be safely above the
-  // rounding floor.
-  console.log("Step 5: depositing 10k AGC to xAGC vault to seed cycle-2 lock_flow...");
+  // The amount only needs to be enough that net_deposits * BPS / float_supply
+  // produces at least 1 bps — float is ~60k AGC after the reset drained most
+  // of the deployer's supply to treasury, so even 10 AGC is plenty.
+  console.log("Step 5: depositing 50 AGC to xAGC vault to seed cycle-2 lock_flow...");
   const xagcAta = (
     await getOrCreateAssociatedTokenAccount(
       connection,
@@ -155,7 +155,7 @@ async function main() {
     )
   ).address;
   await program.methods
-    .depositXagc(new BN(10_000 * 1e9))
+    .depositXagc(new BN(50 * 1e9))
     .accountsStrict({
       state: pk("state"),
       depositor: admin.publicKey,
@@ -171,8 +171,8 @@ async function main() {
 
   // Cycle 2
   console.log("Step 6: recording cycle 2 swaps (price $1.025, higher gross_buy)...");
-  await recordSwap(10_000_000_000, "1025000000000000000", false);
-  await recordSwap(1_000_000_000, "1025000000000000000", true);
+  await recordSwap(10_000_000_000, "1060000000000000000", false); // 10k USDC buy @ $1.06
+  await recordSwap(1_000_000_000, "1060000000000000000", true); // 1k USDC sell @ $1.06
   console.log("Step 7: waiting 3s for epoch window...");
   await sleep(3000);
 
