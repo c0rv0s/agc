@@ -15,6 +15,12 @@ import {
   flatProtocolDocs,
   protocolDocGroups,
 } from "./protocolDocs";
+import {
+  explorerAddressUrl,
+  explorerProgramUrl,
+  solanaAddresses,
+  solanaCluster,
+} from "./contracts";
 
 // The dashboard pulls in @coral-xyz/anchor + @solana/spl-token, which we don't
 // want to ship to landing-page or docs visitors. Lazy-load on first navigation.
@@ -571,6 +577,202 @@ function DocVisual({ page }: { page: (typeof flatProtocolDocs)[number] }) {
   );
 }
 
+type DeploymentAddressItem = {
+  label: string;
+  address: string | undefined;
+  note?: string;
+  isProgram?: boolean;
+};
+
+type DeploymentAddressGroup = {
+  title: string;
+  description?: string;
+  items: DeploymentAddressItem[];
+};
+
+function buildDeploymentGroups(): DeploymentAddressGroup[] {
+  return [
+    {
+      title: "Program",
+      description: "The Anchor program and its top-level state account.",
+      items: [
+        {
+          label: "AGC program",
+          address: solanaAddresses.programId,
+          note: "Deployed Anchor executable",
+          isProgram: true,
+        },
+        {
+          label: "Protocol state",
+          address: solanaAddresses.state,
+          note: "ProtocolState PDA (authorities, policy, telemetry)",
+        },
+      ],
+    },
+    {
+      title: "Mints",
+      description:
+        "Protocol-owned tokens (AGC, xAGC) plus the collateral and reserve mints used by this deployment.",
+      items: [
+        {
+          label: "AGC mint",
+          address: solanaAddresses.agcMint,
+          note: "Liquid credit inventory",
+        },
+        {
+          label: "xAGC mint",
+          address: solanaAddresses.xagcMint,
+          note: "Expansion-share token",
+        },
+        {
+          label: "USDC mint",
+          address: solanaAddresses.usdcMint,
+          note:
+            solanaCluster === "mainnet-beta"
+              ? "Defense cash"
+              : "Defense cash (devnet test mint)",
+        },
+        {
+          label: "BTC mint",
+          address: solanaAddresses.btcMint,
+          note:
+            solanaCluster === "mainnet-beta"
+              ? "Strategic reserve"
+              : "Strategic reserve (devnet test mint)",
+        },
+      ],
+    },
+    {
+      title: "Treasury and vaults",
+      description:
+        "PDAs that hold protocol funds and back the xAGC and credit facilities.",
+      items: [
+        { label: "Treasury AGC", address: solanaAddresses.treasuryAgc },
+        { label: "Treasury USDC", address: solanaAddresses.treasuryUsdc },
+        {
+          label: "xAGC vault",
+          address: solanaAddresses.xagcVaultAgc,
+          note: "AGC backing every xAGC share",
+        },
+        {
+          label: "Underwriter vault",
+          address: solanaAddresses.underwriterVaultAgc,
+          note: "First-loss AGC reserve",
+        },
+      ],
+    },
+    {
+      title: "Allocation buckets",
+      description:
+        "Destinations for non-xAGC expansion flow when policy mints AGC.",
+      items: [
+        { label: "Growth", address: solanaAddresses.growthAgc },
+        { label: "LP rewards", address: solanaAddresses.lpAgc },
+        { label: "Integrators", address: solanaAddresses.integratorsAgc },
+      ],
+    },
+    {
+      title: "Credit facility (BTC)",
+      description:
+        "The launch credit facility, its collateral asset registry entry, and its oracle feed.",
+      items: [
+        { label: "Facility", address: solanaAddresses.facility },
+        {
+          label: "Collateral asset",
+          address: solanaAddresses.collateralAsset,
+          note: "CollateralAsset registry entry",
+        },
+        {
+          label: "Collateral oracle",
+          address: solanaAddresses.collateralOracle,
+          note: "Pyth-backed price feed",
+        },
+      ],
+    },
+  ];
+}
+
+function shortenAddress(address: string | undefined) {
+  if (!address) return " - ";
+  if (address.length <= 16) return address;
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
+}
+
+function DeploymentAddressRow({ item }: { item: DeploymentAddressItem }) {
+  const [copied, setCopied] = useState(false);
+  const explorerUrl = item.isProgram
+    ? explorerProgramUrl(item.address)
+    : explorerAddressUrl(item.address);
+
+  async function handleCopy() {
+    if (!item.address) return;
+    try {
+      await navigator.clipboard.writeText(item.address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch (error) {
+      console.error("Copy failed", error);
+    }
+  }
+
+  return (
+    <div className="deployment-row">
+      <div className="deployment-row-text">
+        <strong>{item.label}</strong>
+        {item.note ? <span className="deployment-row-note">{item.note}</span> : null}
+      </div>
+      <div className="deployment-row-address">
+        <code title={item.address ?? undefined}>{shortenAddress(item.address)}</code>
+        <div className="deployment-row-actions">
+          <button
+            type="button"
+            className="deployment-action"
+            onClick={handleCopy}
+            disabled={!item.address}
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+          {explorerUrl ? (
+            <a
+              className="deployment-action"
+              href={explorerUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Explorer
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeploymentAddresses() {
+  const groups = buildDeploymentGroups();
+  return (
+    <div className="deployment-table">
+      <div className="deployment-table-header">
+        <span>Cluster</span>
+        <strong>{solanaCluster}</strong>
+      </div>
+      {groups.map((group) => (
+        <section key={group.title} className="deployment-group">
+          <header>
+            <h3>{group.title}</h3>
+            {group.description ? <p>{group.description}</p> : null}
+          </header>
+          <div className="deployment-rows">
+            {group.items.map((item) => (
+              <DeploymentAddressRow key={item.label} item={item} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function DocsPage() {
   const activeDoc = activeDocFromPath();
   const activeIndex = flatProtocolDocs.findIndex((page) => page.id === activeDoc.id);
@@ -632,6 +834,7 @@ function DocsPage() {
             {activeDoc.body.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
+            {activeDoc.id === "deployments" ? <DeploymentAddresses /> : null}
             {activeDoc.example ? (
               <div className="doc-callout">
                 <strong>{activeDoc.example.title}</strong>

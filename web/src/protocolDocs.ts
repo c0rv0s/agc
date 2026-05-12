@@ -342,8 +342,24 @@ export const protocolDocGroups: ProtocolDocGroup[] = [
       },
     ],
   },
+  {
+    title: "Deployment",
+    pages: [
+      {
+        id: "deployments",
+        title: "Deployed addresses",
+        summary:
+          "Every program, mint, vault, and registry account that the live AGC deployment depends on, grouped so you can audit each surface in one place.",
+        visual: "integration",
+        body: [
+          "These are the onchain addresses the dashboard reads from and the keepers operate against. Each one resolves to a Solana Explorer link on the active cluster.",
+          "Override any value at build time with the matching VITE_SOLANA_* environment variable; the table below always reflects what the current bundle is using.",
+        ],
+      },
+    ],
+  },
 ];
 
 export const flatProtocolDocs = protocolDocGroups.flatMap((group) => group.pages);
 
-export const docsUpdatedAt = "2026-04-27";
+export const docsUpdatedAt = "2026-05-11";

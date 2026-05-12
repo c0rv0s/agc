@@ -351,15 +351,9 @@ function DashboardPage() {
           : " - ",
       detail: "USDC + AGC (anchor-valued)",
     },
-    {
-      label: "Program",
-      value: shortKey(solanaAddresses.programId),
-      detail: solanaCluster,
-    },
   ];
 
   const operatingMetrics: readonly (readonly [string, string])[] = [
-    ["Program ID", shortKey(solanaAddresses.programId)],
     ["Cluster", solanaCluster],
     ["Last settled epoch", snapshot.state?.lastSettledEpoch.toString() ?? " - "],
     ["AGC supply", snapshot.balances ? `${formatAgc(snapshot.balances.agcSupply)} AGC` : " - "],
